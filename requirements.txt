@@ -1,0 +1,11 @@
+werkzeug
+SQLAlchemy
+wsgilog
+cython
+mysql-python
+munkres
+parsedatetime
+argparse
+numpy
+pil
+
