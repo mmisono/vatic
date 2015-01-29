@@ -23,7 +23,10 @@ installer as root.
     $ ./vatic-install.sh
     $ cd vatic
 
---- HTTP Server Configuration -------------------------------------------------
+--- HTTP Server Configuration Apache-------------------------------------------------
+
+NOTE: This is only necessary if you need a full apache server (ie for turk).
+For a simple debug server follow the instructions in the next section.
 
 Open the Apache configuration file. On Ubuntu, this file is located at:
 
@@ -56,6 +59,8 @@ Make sure you have the mod_headers module enabled:
 After making these changes, restart Apache:
 
     $ sudo apache2ctl graceful
+
+--- HTTP Server Configuration Apache-------------------------------------------------
 
 --- SQL Server Configuration --------------------------------------------------
 
