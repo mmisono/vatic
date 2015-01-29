@@ -128,6 +128,10 @@ Turk.
 Our system requires that videos are extracted into JPEG frames. Our tool can 
 do this automatically for you:
 
+Note: Ubuntu 14.04 does not ffmpeg but has avconv which is equivelant. Install
+that with apt-get and replace 'ffmpeg' in line 17 of pyvision/vision/ffmpeg.py
+with 'avconv'
+
     $ mkdir /path/to/output/directory
     $ turkic extract /path/to/video.mp4 /path/to/output/directory
 
