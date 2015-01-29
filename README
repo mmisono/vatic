@@ -15,10 +15,11 @@ however it should work any operating system and with any server.
 
 --- Download ------------------------------------------------------------------
 
-You can download and extract VATIC from our website. Note: do NOT run the 
-installer as root. 
+To get the modified version of VATIC follow these instructions:
 
-    $ wget http://mit.edu/vondrick/vatic/vatic-install.sh
+    $ git clone https://github.com/johndoherty/vatic.git
+    $ cp vatic-install.sh ..
+    $ cd ..
     $ chmod +x vatic-install.sh
     $ ./vatic-install.sh
     $ cd vatic
