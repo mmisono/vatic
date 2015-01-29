@@ -17,6 +17,10 @@ however it should work any operating system and with any server.
 
 To get the modified version of VATIC follow these instructions:
 
+If you want to use a virtualenv run the first two lines:
+    $ virtualenv .env
+    $ source .env/bin/activate
+
     $ git clone https://github.com/johndoherty/vatic.git
     $ cp vatic-install.sh ..
     $ cd ..

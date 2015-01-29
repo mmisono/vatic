@@ -6,10 +6,6 @@ git clone https://github.com/cvondrick/turkic.git
 git clone https://github.com/cvondrick/pyvision.git
 git clone https://github.com/johndoherty/vatic.git
 
-# Setup virtual environment
-sudo pip install virtualenv
-virtualenv .env
-source .env/bin/activate
 pip install -r vatic/requirements.txt -U --allow-all-external --allow-unverified PIL
 
 cd turkic
