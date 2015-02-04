@@ -2,7 +2,7 @@
 sudo apt-get install git python-setuptools python-dev libavcodec-dev libavformat-dev libswscale-dev libjpeg62 libjpeg62-dev libfreetype6 libfreetype6-dev apache2 libapache2-mod-wsgi mysql-server-5.5 mysql-client-5.5 libmysqlclient-dev gfortran 
 
 # Clone revevant repos
-git clone https://github.com/cvondrick/turkic.git
+git clone https://github.com/johndoherty/turkic.git
 git clone https://github.com/cvondrick/pyvision.git
 git clone https://github.com/johndoherty/vatic.git
 
