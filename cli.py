@@ -14,6 +14,7 @@ import vision.visualize
 import vision.track.interpolation
 import turkic.models
 from models import *
+from tracking import *
 import cStringIO
 import Image, ImageDraw, ImageFont
 import qa
@@ -122,6 +123,7 @@ class load(LoadCommand):
         parser.add_argument("--for-training-mistakes", type=int, default=0)
         parser.add_argument("--for-training-data", default = None)
         parser.add_argument("--blow-radius", default = 3)
+        parser.add_argument("--run-initial-tracking", action="store_true")
         return parser
 
     def title(self, args):
@@ -337,6 +339,9 @@ class load(LoadCommand):
                     box.outside = int(outside)
                     box.occluded = int(occluded)
                     pathcache[id].boxes.append(box)
+        elif args.run_initial_tracking:
+            # Add initial paths
+            path_dict = get_paths(video)
 
         session.commit()
 
