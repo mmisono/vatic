@@ -984,6 +984,26 @@ function Track(player, color, position)
         return new Position(xtl, ytl, xbr, ybr, occluded, outside);
     }
 
+    this.initializetrack = function(frame) {
+        // Disable interaction
+        console.log(this.journal.bounds(frame)['left']);
+        server_request("initializetrack", [this.journal.bounds(frame)['left'], this.player.frame], function(data) {
+            /*function convert(box)
+            {
+                return new Position(box[0], box[1], box[2], box[3],
+                                    box[6], box[5]);
+            }
+
+            var track = tracks.add(path[0][4], convert(path[0]),
+                                   this.currentcolor[0]);
+            for (var i = 1; i < path.length; i++)
+            {
+                track.journal.mark(path[i][4], convert(path[i]));
+            }*/
+        });
+
+    }
+
     this.draw(this.player.frame);
 }
 

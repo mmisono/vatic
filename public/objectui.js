@@ -53,6 +53,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         console.log("Received new track object drawing");
 
         var track = tracks.add(player.frame, position, this.currentcolor[0]);
+        track.initializetrack(player.frame);
 
         this.drawer.disable();
         ui_disable();

@@ -61,46 +61,45 @@ def getboxesforjob(id):
                        "attributes": attrs})
     return result
 
+def readpath(label, track, attributes):
+    path = Path()
+    path.label = session.query(Label).get(label)
+ 
+    logger.debug("Received a {0} track".format(path.label.text))
+
+    visible = False
+    for frame, userbox in track.items():
+        box = Box(path = path)
+        box.xtl = max(int(userbox[0]), 0)
+        box.ytl = max(int(userbox[1]), 0)
+        box.xbr = max(int(userbox[2]), 0)
+        box.ybr = max(int(userbox[3]), 0)
+        box.occluded = int(userbox[4])
+        box.outside = int(userbox[5])
+        box.frame = int(frame)
+        if not box.outside:
+            visible = True
+
+        logger.debug("Received box {0}".format(str(box.getbox())))
+
+    if not visible:
+        logger.warning("Received empty path! Skipping")
+        return
+
+    for attributeid, timeline in attributes.items():
+        attribute = session.query(Attribute).get(attributeid)
+        for frame, value in timeline.items():
+            aa = AttributeAnnotation()
+            aa.attribute = attribute
+            aa.frame = frame
+            aa.value = value
+            path.attributes.append(aa)
+
 def readpaths(tracks):
     paths = []
     logger.debug("Reading {0} total tracks".format(len(tracks)))
 
-    for label, track, attributes in tracks:
-        path = Path()
-        path.label = session.query(Label).get(label)
-        
-        logger.debug("Received a {0} track".format(path.label.text))
-
-        visible = False
-        for frame, userbox in track.items():
-            box = Box(path = path)
-            box.xtl = max(int(userbox[0]), 0)
-            box.ytl = max(int(userbox[1]), 0)
-            box.xbr = max(int(userbox[2]), 0)
-            box.ybr = max(int(userbox[3]), 0)
-            box.occluded = int(userbox[4])
-            box.outside = int(userbox[5])
-            box.frame = int(frame)
-            if not box.outside:
-                visible = True
-
-            logger.debug("Received box {0}".format(str(box.getbox())))
-
-        if not visible:
-            logger.warning("Received empty path! Skipping")
-            continue
-
-        for attributeid, timeline in attributes.items():
-            attribute = session.query(Attribute).get(attributeid)
-            for frame, value in timeline.items():
-                aa = AttributeAnnotation()
-                aa.attribute = attribute
-                aa.frame = frame
-                aa.value = value
-                path.attributes.append(aa)
-
-        paths.append(path)
-    return paths
+    return [readpath(label, track, attributes) for label, track, attributes in tracks]
 
 @handler(post = "json")
 def savejob(id, tracks):
@@ -135,3 +134,7 @@ def respawnjob(id):
     replacement.publish()
     session.add(replacement)
     session.commit()
+
+@handler(post = "json")
+def initialtrack(box, frame):
+    logger.debug("Computing initial tracks. Returns a path")
