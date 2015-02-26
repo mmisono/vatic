@@ -53,7 +53,6 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         console.log("Received new track object drawing");
 
         var track = tracks.add(player.frame, position, this.currentcolor[0]);
-        track.initializetrack(player.frame);
 
         this.drawer.disable();
         ui_disable();
@@ -106,11 +105,11 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         function convert(box)
         {
             return new Position(box[0], box[1], box[2], box[3],
-                                box[6], box[5]);
+                                box[6], box[5], box[9]);
         }
 
         var track = tracks.add(path[0][4], convert(path[0]),
-                               this.currentcolor[0]);
+                               this.currentcolor[0], true);
         for (var i = 1; i < path.length; i++)
         {
             track.journal.mark(path[i][4], convert(path[i]));
@@ -235,6 +234,7 @@ function TrackObject(job, player, container, color)
 
     this.tooltip = null;
     this.tooltiptimer = null;
+    this.trackingpane = null;
 
     this.initialize = function(id, track, tracks)
     {
@@ -259,6 +259,17 @@ function TrackObject(job, player, container, color)
             me.hidetooltip();
         });
 
+        this.track.onstarttracking.push(function() {
+            console.log("Start tracking");
+            var boxtext = "<strong>(Tracking)</strong>";
+            me.track.settext(boxtext);
+        })
+
+        this.track.ondonetracking.push(function() {
+            console.log("Done tracking");
+            me.updateboxtext();
+        })
+
         this.track.oninteract.push(function() {
             var pos = me.handle.position().top + me.container.scrollTop() - 30;
             pos = pos - me.handle.height();
@@ -269,6 +280,7 @@ function TrackObject(job, player, container, color)
 
         this.track.onupdate.push(function() {
             me.hidetooltip();
+            me.showtrackingpane();
             eventlog("interact", "Interact with box " + me.id);
         });
 
@@ -380,6 +392,26 @@ function TrackObject(job, player, container, color)
         this.player.onupdate.push(function() {
             me.updateboxtext();
         });
+    }
+
+    this.showtrackingpane = function() {
+        if (this.headerdetails && !this.trackingpane) {
+            this.trackingpane = $("<div id='trackobject" + this.id + "retrack' title='Retrack this object'>Retrack</div>").appendTo(this.headerdetails);
+            $("#trackobject" + this.id + "retrack").click(function() {
+                me.track.trackfromframe(me.player.frame);
+                me.hidetrackingpane();
+            });
+        }
+    }
+
+    this.hidetrackingpane = function() {
+        if (this.trackingpane != null)
+        {
+            this.trackingpane.slideUp(250, function() {
+                $(this).remove(); 
+            });
+            this.trackingpane = null;
+        }
     }
 
     this.updateboxtext = function()

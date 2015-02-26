@@ -5,10 +5,11 @@ function ui_build(job)
     var screen = ui_setup(job);
     var videoframe = $("#videoframe");
     var player = new VideoPlayer(videoframe, job);
-    var tracks = new TrackCollection(player, job);
+    var autotracker = new AutoTracker(job);
+    var tracks = new TrackCollection(player, job, autotracker);
     var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
 
-    ui_setupbuttons(job, player, tracks);
+    ui_setupbuttons(job, player, tracks, autotracker);
     ui_setupslider(player);
     ui_setupsubmit(job, tracks);
     ui_setupclickskip(job, player, tracks, objectui);
@@ -90,6 +91,16 @@ function ui_setup(job)
     "<label for='annotateoptionshideboxtext'>Hide Labels?</label> ");
 
     $("#advancedoptions").append(
+    "<div id='trackingalgorithm'>" +
+    "<input type='radio' name='trackingalgorithm' " +
+        "value='forward' id='trackingalgorithmforward'>" +
+    "<label for='trackingalgorithmforward'>Forward Tracking</label>" +
+    "<input type='radio' name='trackingalgorithm' " +
+        "value='bidirectional' id='trackingalgorithmbidirectional' checked='checked'>" +
+    "<label for='trackingalgorithmbidirectional'>Bi Directional Tracking</label>" +
+    "</div>");
+
+    $("#advancedoptions").append(
     "<div id='speedcontrol'>" +
     "<input type='radio' name='speedcontrol' " +
         "value='5,1' id='speedcontrolslower'>" +
@@ -115,7 +126,7 @@ function ui_setup(job)
     return screen;
 }
 
-function ui_setupbuttons(job, player, tracks)
+function ui_setupbuttons(job, player, tracks, autotracker)
 {
     $("#instructionsbutton").click(function() {
         player.pause();
@@ -209,6 +220,13 @@ function ui_setupbuttons(job, player, tracks)
             player.play();
         }
         eventlog("speedcontrol", "FPS = " + player.fps + " and delta = " + player.playdelta);
+    });
+
+    $("#trackingalgorithm").buttonset();
+    $("input[name='trackingalgorithm']").click(function() {
+        autotracker.algorithm = $(this).val()
+        console.log("Changed algorighm to: " + autotracker.algorithm);
+        eventlog("trackingalgorithm", "FPS = " + autotracker.algorithm);
     });
 
     $("#annotateoptionsresize").button().click(function() {

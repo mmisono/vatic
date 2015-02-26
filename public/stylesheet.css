@@ -154,6 +154,11 @@ code
     display : inline;
 }
 
+#trackingalgorithm
+{
+    display : inline;
+}
+
 #annotateoptions
 {
     display : inline;
@@ -368,6 +373,11 @@ code
 .boundingboxoccluded
 {
     border-style : dashed;
+}
+
+.boundingboxgenerated
+{
+    border-style : dotted;
 }
 
 .ui-resizable-disabled

@@ -274,10 +274,11 @@ class Box(turkic.database.Base):
     frame = Column(Integer)
     occluded = Column(Boolean, default = False)
     outside = Column(Boolean, default = False)
+    generated = Column(Boolean, default = False)
 
     def getbox(self):
         return vision.Box(self.xtl, self.ytl, self.xbr, self.ybr,
-                          self.frame, self.outside, self.occluded, 0)
+                          self.frame, self.outside, self.occluded, 0, generated=self.generated)
 
 class PerObjectBonus(turkic.models.BonusSchedule):
     __tablename__ = "per_object_bonuses"

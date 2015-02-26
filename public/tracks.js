@@ -253,13 +253,14 @@ var track_collection_dump = null;
 /*
  * A collection of tracks.
  */
-function TrackCollection(player, job)
+function TrackCollection(player, job, autotracker)
 {
     var me = this;
 
     this.player = player;
     this.job = job;
     this.tracks = [];
+    this.autotracker = autotracker;
 
     this.onnewobject = []; 
 
@@ -282,9 +283,9 @@ function TrackCollection(player, job)
     /*
      * Creates a new object.
      */
-    this.add = function(frame, position, color)
+    this.add = function(frame, position, color, existing)
     {
-        var track = new Track(this.player, color, position);
+        var track = new Track(this.player, color, position, this.autotracker, !existing);
         this.tracks.push(track);
 
         console.log("Added new track");
@@ -415,7 +416,7 @@ function TrackCollection(player, job)
 /*
  * A track class.
  */
-function Track(player, color, position)
+function Track(player, color, position, autotracker, runtracking)
 {
     var me = this;
 
@@ -423,9 +424,11 @@ function Track(player, color, position)
     this.attributejournals = {};
     this.label = null;
     this.player = player;
+    this.autotracker = autotracker;
     this.handle = null;
     this.color = color;
     this.htmloffset = 3;
+    this.text = "";
     this.deleted = false;
 
     this.onmouseover = [];
@@ -433,6 +436,8 @@ function Track(player, color, position)
     this.oninteract = [];
     this.onupdate = [];
     this.onstartupdate = [];
+    this.onstarttracking = [];
+    this.ondonetracking = [];
 
     this.candrag = true;
     this.canresize = true;
@@ -443,7 +448,7 @@ function Track(player, color, position)
     this.journal.mark(this.player.job.start,
         new Position(position.xtl, position.ytl,
                      position.xbr, position.ybr, 
-                     false, true, []));
+                     false, true, false, []));
 
     this.journal.mark(this.player.frame, position);
 
@@ -494,6 +499,12 @@ function Track(player, color, position)
      * Polls the on screen position and marks it in the journal.
      */
     this.recordposition = function()
+    {
+        this.journal.mark(this.player.frame, this.pollposition());
+        this.journal.artificialright = this.journal.rightmost();
+    }
+
+    this.settrackframe = function()
     {
         this.journal.mark(this.player.frame, this.pollposition());
         this.journal.artificialright = this.journal.rightmost();
@@ -553,6 +564,22 @@ function Track(player, color, position)
         for (var i in this.onstartupdate)
         {
             this.onstartupdate[i]();
+        }
+    }
+
+    this.notifystarttracking = function()
+    {
+        for (var i in this.onstarttracking)
+        {
+            this.onstarttracking[i]();
+        }
+    }
+
+    this.notifydonetracking = function()
+    {
+        for (var i in this.ondonetracking)
+        {
+            this.ondonetracking[i]();
         }
     }
 
@@ -652,8 +679,9 @@ function Track(player, color, position)
     {
         if (this.handle != null)
         {
+            this.text = value;
             var t = this.handle.children(".boundingboxtext");
-            t.html(value).show();
+            t.html(this.text).show();
         }
 
     }
@@ -794,6 +822,14 @@ function Track(player, color, position)
         else
         {
             this.handle.removeClass("boundingboxoccluded");
+        }
+
+        if (position.generated)
+        {
+            this.handle.addClass("boundingboxgenerated");
+        } else
+        {
+            this.handle.removeClass("boundingboxgenerated");
         }
 
         var offset = this.player.handle.offset();
@@ -981,30 +1017,39 @@ function Track(player, color, position)
             outside = bounds['left'].outside;
 //        }
 
-        return new Position(xtl, ytl, xbr, ybr, occluded, outside);
+        user_frame = ((Math.abs(bounds['leftframe'] - frame) < 5) && !bounds['left'].generated)
+         || (Math.abs(bounds['rightframe'] - frame) < 5 && !bounds['right'].generated)
+        return new Position(xtl, ytl, xbr, ybr, occluded, outside, !user_frame);
     }
 
-    this.initializetrack = function(frame) {
-        // Disable interaction
-        console.log(this.journal.bounds(frame)['left']);
-        server_request("initializetrack", [this.journal.bounds(frame)['left'], this.player.frame], function(data) {
-            /*function convert(box)
+    this.trackfromframe = function(frame, callback) {
+        this.setlock(true);
+        this.journal.clearfromframe(frame);
+        this.notifystarttracking();
+        var oldtext = this.text;
+        var bounds = this.journal.bounds(frame);
+        bounds = bounds['left'] != null ? bounds['left'] : bounds['right'];
+        this.autotracker.fromframe(frame, bounds, function(data) {
+            var path = data.boxes
+            function convert(box)
             {
                 return new Position(box[0], box[1], box[2], box[3],
-                                    box[6], box[5]);
+                    box[6], box[5], box[9]);
             }
 
-            var track = tracks.add(path[0][4], convert(path[0]),
-                                   this.currentcolor[0]);
             for (var i = 1; i < path.length; i++)
             {
-                track.journal.mark(path[i][4], convert(path[i]));
-            }*/
+                me.journal.mark(path[i][4], convert(path[i]));
+            }
+            me.setlock(false);
+            me.notifydonetracking();
         });
-
     }
 
     this.draw(this.player.frame);
+    if (runtracking) {
+        this.trackfromframe(this.player.frame);
+    }
 }
 
 /*
@@ -1046,6 +1091,19 @@ function Journal(start, blowradius)
 
         this.annotations = newannotations;
         this.annotations[frame] = position;
+    }
+
+    this.clearfromframe = function(frame) {
+        clearframes = []
+        console.log("Length: " + this.annotations.length);
+        for (t in this.annotations) {
+            time = parseInt(t);
+            if (time >= frame) clearframes.push(time);
+        }
+        for (t in clearframes) {
+            delete this.annotations[t];
+        }
+        console.log("Length: " + this.annotations.length);
     }
 
     
@@ -1151,7 +1209,7 @@ function Journal(start, blowradius)
  * A structure to store a position.
  * Occlusion and outside is optional.
  */
-function Position(xtl, ytl, xbr, ybr, occluded, outside)
+function Position(xtl, ytl, xbr, ybr, occluded, outside, generated)
 {
     this.xtl = xtl;
     this.ytl = ytl;
@@ -1161,6 +1219,7 @@ function Position(xtl, ytl, xbr, ybr, occluded, outside)
     this.outside = outside ? true : false;
     this.width = xbr - xtl;
     this.height = ybr - ytl;
+    this.generated = generated ? true : false;
 
     if (this.xbr <= this.xtl)
     {
@@ -1178,7 +1237,8 @@ function Position(xtl, ytl, xbr, ybr, occluded, outside)
                      this.xbr + "," +
                      this.ybr + "," +
                      this.occluded + "," +
-                     this.outside + "]";
+                     this.outside + "," +
+                     this.generated + "]";
     }
 
     this.clone = function()
@@ -1188,6 +1248,7 @@ function Position(xtl, ytl, xbr, ybr, occluded, outside)
                             this.xbr,
                             this.ybr,
                             this.occluded,
-                            this.outside)
+                            this.outside,
+                            this.generated);
     }
 }

@@ -66,11 +66,11 @@ def match_rects_to_paths(rects, paths, frame_num):
 def clean_paths(paths):
     return [path for path in paths if len(path) > 3]
 
-def convert_to_db(paths, job, default_label):
+def convert_to_db(paths, job, label):
     paths = clean_paths(paths)
     paths_db = []
     for path in paths:
-        path_db = Path(job = job, label=default_label)
+        path_db = Path(job = job, label=label)
         for box in path:
             box_db = Box(path = path_db)
             box_db.xtl = box['rect'][0]
@@ -84,6 +84,35 @@ def convert_to_db(paths, job, default_label):
 
         paths_db.append(path_db)
     return paths_db
+
+def rect_to_box(rect, path, track_start):
+    box = Box(path = path)
+    box.xtl = rect['rect'][0]
+    box.ytl = rect['rect'][1]
+    box.xbr = rect['rect'][0] + rect['rect'][2]
+    box.ybr = rect['rect'][1] + rect['rect'][3]
+    box.frame = rect['frame'] + track_start
+    box.generated = int(rect['generated'])
+    box.outside = 0
+    box.occluded = 0
+    return box
+
+def convert_track_to_path(track_start, track, job):
+    path = Path(job = job)
+    first_frame = job.segment.stop
+    first_rect = None
+    for rect in track:
+        box = rect_to_box(rect, path, track_start)
+        path.boxes.append(box)
+        if box.frame < first_frame:
+            first_frame = box.frame
+            first_rect = rect
+    if track_start > 0:
+        first_box = rect_to_box(first_rect, path, track_start)
+        first_box.frame = 0
+        first_box.outside = 1
+        path.boxes.append(first_box)
+    return path
 
 def get_paths(v):
     video = v

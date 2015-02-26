@@ -2,6 +2,8 @@ import os.path, sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import config
+from tracking import run_tracking
+from tracking_helpers import convert_track_to_path
 from turkic.server import handler, application
 from turkic.database import session
 import cStringIO
@@ -76,6 +78,7 @@ def readpath(label, track, attributes):
         box.ybr = max(int(userbox[3]), 0)
         box.occluded = int(userbox[4])
         box.outside = int(userbox[5])
+        box.generated = int(userbox[6])
         box.frame = int(frame)
         if not box.outside:
             visible = True
@@ -94,11 +97,11 @@ def readpath(label, track, attributes):
             aa.frame = frame
             aa.value = value
             path.attributes.append(aa)
+    return path
 
 def readpaths(tracks):
     paths = []
     logger.debug("Reading {0} total tracks".format(len(tracks)))
-
     return [readpath(label, track, attributes) for label, track, attributes in tracks]
 
 @handler(post = "json")
@@ -109,6 +112,8 @@ def savejob(id, tracks):
         session.delete(path)
     session.commit()
     for path in readpaths(tracks):
+
+        logger.info(path)
         job.paths.append(path)
 
     session.add(job)
@@ -136,5 +141,20 @@ def respawnjob(id):
     session.commit()
 
 @handler(post = "json")
-def initialtrack(box, frame):
-    logger.debug("Computing initial tracks. Returns a path")
+def trackfromframe(id, frame, algorithm, box):
+    frame = int(frame)
+    logger.info("Job Id: {0}".format(id))
+    logger.info("Algorithm: {0}".format(algorithm))
+    job = session.query(Job).get(id)
+    segment = job.segment
+    video = segment.video
+    xtl, ytl, xbr, ybr, occluded, outside, userframe = box
+    tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
+    path = convert_track_to_path(frame, tracks, job)
+    logger.info("Path: {0}".format(path))
+    attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
+    return {
+        "label": 0,
+        "boxes": [tuple(x) for x in path.getboxes()],
+        "attributes": attrs
+    }
