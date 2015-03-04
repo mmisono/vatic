@@ -448,7 +448,7 @@ function Track(player, color, position, autotracker, runtracking)
     this.journal.mark(this.player.job.start,
         new Position(position.xtl, position.ytl,
                      position.xbr, position.ybr, 
-                     false, true, false, []));
+                     false, true, true, []));
 
     this.journal.mark(this.player.frame, position);
 
@@ -1017,33 +1017,91 @@ function Track(player, color, position, autotracker, runtracking)
             outside = bounds['left'].outside;
 //        }
 
-        user_frame = ((Math.abs(bounds['leftframe'] - frame) < 5) && !bounds['left'].generated)
-         || (Math.abs(bounds['rightframe'] - frame) < 5 && !bounds['right'].generated)
+        user_frame = ((Math.abs(bounds['leftframe'] - frame) < 2) && !bounds['left'].generated)
+         || (Math.abs(bounds['rightframe'] - frame) < 2 && !bounds['right'].generated)
         return new Position(xtl, ytl, xbr, ybr, occluded, outside, !user_frame);
+    }
+
+    this.trackleft = function(frame, callback) {
+        var bounds = this.journal.bounds(frame-1, false);
+        if (bounds['left'] == null || bounds['rightframe'] != frame) {
+            callback();
+        } else {
+            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+            this.autotracker.betweenframes(
+                bounds['leftframe'],
+                bounds['rightframe'],
+                bounds['left'],
+                bounds['right'],
+                function (data) {
+                    var path = data.boxes;
+                    for (var i = 1; i < path.length; i++)
+                    {
+                        me.journal.mark(path[i][4], Position.fromdata(path[i]));
+                    }
+                    callback(data);
+                }
+            );
+        }
+    }
+
+    this.trackright = function(frame, callback) {
+        var bounds = this.journal.bounds(frame+1, false);
+        if (bounds['leftframe'] != frame) {
+            callback();
+        } else if (bounds['right'] == null) {
+            this.journal.clearfromframe(frame);
+            this.autotracker.fromframe(
+                bounds['leftframe'],
+                bounds['left'],
+                function (data) {
+                    var path = data.boxes;
+                    for (var i = 1; i < path.length; i++)
+                    {
+                        me.journal.mark(path[i][4], Position.fromdata(path[i]));
+                    }
+                    callback(data);
+                }
+            );
+        } else {
+            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+            this.autotracker.betweenframes(
+                bounds['leftframe'],
+                bounds['rightframe'],
+                bounds['left'],
+                bounds['right'],
+                function (data) {
+                    var path = data.boxes;
+                    for (var i = 1; i < path.length; i++)
+                    {
+                        me.journal.mark(path[i][4], Position.fromdata(path[i]));
+                    }
+                    callback(data);
+                }
+            );
+        }
     }
 
     this.trackfromframe = function(frame, callback) {
         this.setlock(true);
-        this.journal.clearfromframe(frame);
         this.notifystarttracking();
         var oldtext = this.text;
-        var bounds = this.journal.bounds(frame);
-        bounds = bounds['left'] != null ? bounds['left'] : bounds['right'];
-        this.autotracker.fromframe(frame, bounds, function(data) {
-            var path = data.boxes
-            function convert(box)
-            {
-                return new Position(box[0], box[1], box[2], box[3],
-                    box[6], box[5], box[9]);
+        var leftdone = false;
+        var rightdone = false;
+        function done() {
+            if (rightdone && leftdone) {
+                me.setlock(false);
+                me.notifydonetracking();
             }
-
-            for (var i = 1; i < path.length; i++)
-            {
-                me.journal.mark(path[i][4], convert(path[i]));
-            }
-            me.setlock(false);
-            me.notifydonetracking();
-        });
+        }
+        this.trackleft(frame, function() {
+            leftdone = true;
+            done();
+        })
+        this.trackright(frame, function() {
+            rightdone = true;
+            done();
+        })
     }
 
     this.draw(this.player.frame);
@@ -1093,22 +1151,31 @@ function Journal(start, blowradius)
         this.annotations[frame] = position;
     }
 
-    this.clearfromframe = function(frame) {
+    this.clearbetweenframes = function(frame1, frame2) {
         clearframes = []
-        console.log("Length: " + this.annotations.length);
         for (t in this.annotations) {
             time = parseInt(t);
-            if (time >= frame) clearframes.push(time);
+            if (time > frame1 && time < frame2) clearframes.push(time);
         }
         for (t in clearframes) {
             delete this.annotations[t];
         }
-        console.log("Length: " + this.annotations.length);
     }
 
+    this.clearfromframe = function(frame) {
+        clearframes = []
+        for (t in this.annotations) {
+            time = parseInt(t);
+            if (time > frame) clearframes.push(time);
+        }
+        for (t in clearframes) {
+            delete this.annotations[t];
+        }
+    }
     
-    this.bounds = function(frame)
+    this.bounds = function(frame, usegenerated)
     {
+        usegenerated = typeof usegenerated !== 'undefined' ? usegenerated : true;
         if (this.annotations[frame])
         {
             var item = this.annotations[frame];
@@ -1127,6 +1194,10 @@ function Journal(start, blowradius)
         {
             var item = this.annotations[t];
             itemtime = parseInt(t);
+
+            if (!usegenerated && item.generated == true) {
+                continue;
+            }
 
             if (itemtime <= frame)
             {
@@ -1251,4 +1322,9 @@ function Position(xtl, ytl, xbr, ybr, occluded, outside, generated)
                             this.outside,
                             this.generated);
     }
+}
+
+Position.fromdata = function(box) {
+    return new Position(box[0], box[1], box[2], box[3],
+            box[6], box[5], box[9]);
 }

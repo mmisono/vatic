@@ -141,20 +141,52 @@ def respawnjob(id):
     session.commit()
 
 @handler(post = "json")
-def trackfromframe(id, frame, algorithm, box):
+def trackfromframe(id, frame, algorithm, position):
     frame = int(frame)
-    logger.info("Job Id: {0}".format(id))
-    logger.info("Algorithm: {0}".format(algorithm))
     job = session.query(Job).get(id)
     segment = job.segment
     video = segment.video
-    xtl, ytl, xbr, ybr, occluded, outside, userframe = box
+    xtl, ytl, xbr, ybr, occluded, outside, generated = position
+
+    logger.info("Job Id: {0}".format(id))
+    logger.info("Algorithm: {0}".format(algorithm))
+
     tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
     path = convert_track_to_path(frame, tracks, job)
-    logger.info("Path: {0}".format(path))
     attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
+
+    logger.info("Path: {0}".format(path))
+
     return {
         "label": 0,
         "boxes": [tuple(x) for x in path.getboxes()],
         "attributes": attrs
     }
+
+@handler(post = "json")
+def trackbetweenframes(id, leftframe, rightframe, algorithm, pos):
+    leftpos, rightpos = pos
+    lxtl, lytl, lxbr, lybr, loccluded, loutside, lgenerated = leftpos
+    rxtl, rytl, rxbr, rybr, roccluded, routside, rgenerated = rightpos
+    leftframe = int(leftframe)
+    rightframe = int(rightframe)
+
+    logger.info("Track from {0} to {1}".format(leftframe, rightframe))
+    logger.info("Job Id: {0}".format(id))
+    logger.info("Algorithm: {0}".format(algorithm))
+
+    job = session.query(Job).get(id)
+    segment = job.segment
+    video = segment.video
+
+    tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
+    path = convert_track_to_path(frame, tracks, job)
+    attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
+
+    return {
+        "label": 0,
+        "boxes": [tuple(x) for x in path.getboxes()],
+        "attributes": attrs
+    }
+
+

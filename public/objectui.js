@@ -102,17 +102,11 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         var obj = new TrackObject(this.job, this.player,
                                   container, this.currentcolor);
 
-        function convert(box)
-        {
-            return new Position(box[0], box[1], box[2], box[3],
-                                box[6], box[5], box[9]);
-        }
-
-        var track = tracks.add(path[0][4], convert(path[0]),
+        var track = tracks.add(path[0][4], Position.fromdata(path[0]),
                                this.currentcolor[0], true);
         for (var i = 1; i < path.length; i++)
         {
-            track.journal.mark(path[i][4], convert(path[i]));
+            track.journal.mark(path[i][4], Position.fromdata(path[i]));
         }
 
         obj.initialize(this.counter, track, this.tracks);
