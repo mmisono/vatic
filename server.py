@@ -179,14 +179,16 @@ def trackbetweenframes(id, leftframe, rightframe, algorithm, pos):
     segment = job.segment
     video = segment.video
 
-    tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
-    path = convert_track_to_path(frame, tracks, job)
-    attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
+    #tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
+    #path = convert_track_to_path(frame, tracks, job)
+    #attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
     return {
         "label": 0,
-        "boxes": [tuple(x) for x in path.getboxes()],
-        "attributes": attrs
+        "boxes": [],
+        #"boxes": [tuple(x) for x in path.getboxes()],
+        #"attributes": attrs
+        "attributes": []
     }
 
 
