@@ -8,6 +8,8 @@ function ui_build(job)
     var autotracker = new AutoTracker(job);
     var tracks = new TrackCollection(player, job, autotracker);
     var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
+    var planeframe = $("#groundplane").get(0);
+    var planeview = new PlaneView(planeframe, player, tracks);
 
     ui_setupbuttons(job, player, tracks, autotracker);
     ui_setupslider(player);
@@ -41,6 +43,10 @@ function ui_setup(job)
               "<td><div id='bottombar'></div></td>" + 
           "</tr>" +
           "<tr>" +
+              "<td><canvas id='groundplane' width='500' height='400'>Your browser does not support this visual.</canvas></td>" + 
+              "<td><div id='homography'></div></td>" + 
+          "</tr>" +
+          "<tr>" +
               "<td><div id='advancedoptions'></div></td>" +
               "<td><div id='submitbar'></div></td>" +
           "</tr>" +
@@ -63,6 +69,8 @@ function ui_setup(job)
     $("#bottombar").append("<div id='playerslider'></div>");
     $("#bottombar").append("<div class='button' id='rewindbutton'>Rewind</div> ");
     $("#bottombar").append("<div class='button' id='playbutton'>Play</div> ");
+
+    $("#homography").append("<input id='homographyinput' type='text' />");
 
     $("#topbar").append("<div id='newobjectcontainer'>" +
         "<div class='button' id='newobjectbutton'>New Object</div></div>");
