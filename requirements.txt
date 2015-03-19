@@ -1,7 +1,7 @@
 werkzeug
 SQLAlchemy
 wsgilog
-cython
+cython==0.20
 mysql-python
 munkres
 parsedatetime
