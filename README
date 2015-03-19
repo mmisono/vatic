@@ -28,6 +28,10 @@ If you want to use a virtualenv run the first two lines:
     $ ./vatic-install.sh
     $ cd vatic
 
+--- Notes on virtualenv ------------------------------------------------------------
+
+I recommend using a virtual environment for this project. Doing this will make the install much cleaner, but will require a little additional setup. The steps above show the commands for creating and activating the virtualenv. You also may have to move around OpenCV libraries so they can be accessed by the virtualenv. This step is described in the tracking section.
+
 --- HTTP Server Configuration Apache-------------------------------------------------
 
 NOTE: This is only necessary if you need a full apache server (ie for turk).
@@ -65,7 +69,9 @@ After making these changes, restart Apache:
 
     $ sudo apache2ctl graceful
 
---- HTTP Server Configuration Apache-------------------------------------------------
+--- Simple Server Configureation-------------------------------------------------
+
+Really no additional work 
 
 --- SQL Server Configuration --------------------------------------------------
 
