@@ -724,6 +724,15 @@ function Track(player, color, position, autotracker, runtracking)
      */
     this.draw = function(frame, position)
     {
+        this.drawboundingbox(frame, position);
+    }
+
+    this.drawmarker = function(frame, position)
+    {
+    }
+
+    this.drawboundingbox = function(frame, position)
+    {
         if (this.handle == null)
         {
             this.handle = $('<div class="boundingbox"><div class="boundingboxtext"></div></div>');
@@ -1158,7 +1167,7 @@ function Journal(start, blowradius)
             if (time > frame1 && time < frame2) clearframes.push(time);
         }
         for (t in clearframes) {
-            delete this.annotations[t];
+            delete this.annotations[clearframes[t]];
         }
     }
 
@@ -1169,7 +1178,7 @@ function Journal(start, blowradius)
             if (time > frame) clearframes.push(time);
         }
         for (t in clearframes) {
-            delete this.annotations[t];
+            delete this.annotations[clearframes[t]];
         }
     }
     
