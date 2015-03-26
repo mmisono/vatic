@@ -10,6 +10,7 @@ sudo apt-get install git python-setuptools python-dev libavcodec-dev libavformat
 git clone https://github.com/johndoherty/turkic.git
 git clone https://github.com/cvondrick/pyvision.git
 git clone https://github.com/johndoherty/vatic.git
+git clone https://github.com/johndoherty/vatic_tracking.git
 
 pip install -r vatic/requirements.txt -U --allow-all-external --allow-unverified PIL
 
@@ -18,6 +19,10 @@ python setup.py install
 cd ..
 
 cd pyvision
+python setup.py install
+cd ..
+
+cd vatic_tracking
 python setup.py install
 cd ..
 
