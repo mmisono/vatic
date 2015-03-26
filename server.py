@@ -111,11 +111,10 @@ def savejob(id, tracks):
     for path in job.paths:
         session.delete(path)
     session.commit()
-    for path in readpaths(tracks):
 
+    for path in readpaths(tracks):
         logger.info(path)
         job.paths.append(path)
-
     session.add(job)
     session.commit()
 
