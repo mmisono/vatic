@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, Float, String, Boolean, Text
 from sqlalchemy import ForeignKey, Table, PickleType
 from sqlalchemy.orm import relationship, backref
 import Image
+import numpy as np
 import vision
 from vision.track.interpolation import LinearFill
 import random
@@ -33,6 +34,7 @@ class Video(turkic.database.Base):
     isfortraining   = Column(Boolean, default = False)
     trainvalidator  = Column(PickleType, nullable = True, default = None)
     blowradius      = Column(Integer, default = 5)
+    homographylocation  = Column(String(250), nullable = True, default = None)
 
     def __getitem__(self, frame):
         path = Video.getframepath(frame, self.location)
@@ -70,6 +72,11 @@ class Video(turkic.database.Base):
                 if job.completed:
                     count += 1
         return count
+
+    def gethomography(self):
+        if self.homographylocation is None:
+            return None
+        return np.load(self.homographylocation)
 
 class Label(turkic.database.Base):
     __tablename__ = "labels"

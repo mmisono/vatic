@@ -1,16 +1,21 @@
-import os.path, sys
+import os.path, sys, cgi, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import config
+import tempfile
 from tracking import run_tracking
 from tracking_helpers import convert_track_to_path
 from turkic.server import handler, application
 from turkic.database import session
 import cStringIO
 from models import *
+import numpy as np
+import os
 
 import logging
 logger = logging.getLogger("vatic.server")
+
+HOMOGRAPHY_DIR = "homography"
 
 @handler()
 def getjob(id, verified):
@@ -38,6 +43,10 @@ def getjob(id, verified):
                                                                segment.start,
                                                                segment.stop))
 
+    homography = video.gethomography()
+    if homography is not None:
+        homography = homography.tolist()
+
     return {"start":        segment.start,
             "stop":         segment.stop,
             "slug":         video.slug,
@@ -50,7 +59,8 @@ def getjob(id, verified):
             "jobid":        job.id,
             "training":     int(training),
             "labels":       labels,
-            "attributes":   attributes}
+            "attributes":   attributes,
+            "homography":   homography}
 
 @handler()
 def getboxesforjob(id):
@@ -189,5 +199,90 @@ def trackbetweenframes(id, leftframe, rightframe, algorithm, pos):
         #"attributes": attrs
         "attributes": []
     }
+
+@handler()
+def getallvideos():
+    query = session.query(Video)
+    videos = []
+    for video in query:
+        newvideo = {
+            "slug": video.slug,
+            "segments": [],
+        }
+        for segment in video.segments:
+            newsegment = {
+                "start": segment.start,
+                "stop":segment.stop,
+                "jobs":[],
+            }
+
+            for job in segment.jobs:
+                newsegment["jobs"].append({
+                    "url": job.offlineurl(config.localhost),
+                    "numobjects": len(job.paths),
+                })
+
+            newvideo["segments"].append(newsegment)
+
+        videos.append(newvideo)
+    return videos
+
+@handler()
+def getvideo(slug):
+    query = session.query(Video).filter(Video.slug == slug)
+    if query.count() != 1:
+        raise ValueError("Invalid video slug")
+    video = query[0]
+    homography = video.gethomography()
+    if homography is not None:
+        homography = homography.tolist()
+
+    return {
+        "slug": video.slug,
+        "width": video.width,
+        "height": video.height,
+        "homography":homography,
+    }
+
+@handler(post = "json")
+def savehomography(slug, homography):
+    query = session.query(Video).filter(Video.slug == slug)
+    if query.count() != 1:
+        raise ValueError("Invalid video slug")
+    video = query[0]
+
+    base = video.location
+    savedir = os.path.join(base, HOMOGRAPHY_DIR)
+    if not os.path.isdir(savedir):
+        os.makedirs(savedir)
+    savelocation = os.path.join(savedir, "homography.npy")
+    np.save(np.array(homography), savelocation)
+    video.homographylocation = savelocation
+    session.add(video)
+    session.commit()
+
+@handler(post = True, environ = True)
+def savetopview(slug, image, environ):
+    logger.info("Saving topview image")
+
+    query = session.query(Video).filter(Video.slug == slug)
+    if query.count() != 1:
+        raise ValueError("Invalid video slug")
+    video = query[0]
+
+    base = video.location
+    savedir = os.path.join(base, HOMOGRAPHY_DIR)
+    if not os.path.isdir(savedir):
+        os.makedirs(savedir)
+
+    savelocation = os.path.join(savedir, "topview.jpg")
+    tempformfile = tempfile.TemporaryFile()
+    tempformfile.write(image)
+    tempformfile.seek(0)
+    form = cgi.FieldStorage(fp=tempformfile, environ=environ, keep_blank_values=True)
+    outfile = open(savelocation, "w+b")
+    shutil.copyfileobj(form['photo'].file, outfile)
+    tempformfile.close()
+    outfile.close()
 
 

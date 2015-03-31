@@ -13,6 +13,7 @@ function Job(data)
     this.blowradius = null;
     this.thisid = null;
     this.labels = null;
+    this.homography = null;
 
     this.frameurl = function(i)
     {
@@ -39,6 +40,7 @@ function job_import(data)
     job.labels = data["labels"];
     job.attributes = data["attributes"];
     job.training = parseInt(data["training"]);
+    job.homography = data["homography"]
 
     console.log("Job configured!");
     console.log("  Slug: " + job.slug);
