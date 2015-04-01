@@ -6,10 +6,16 @@ function ui_build(job)
     var videoframe = $("#videoframe");
     var player = new VideoPlayer(videoframe, job);
     var autotracker = new AutoTracker(job);
-    var tracks = new TrackCollection(player, job, autotracker);
+    var planeview = null;
+    if (job.homography) {
+        var planeframe = $("#groundplane");
+        planeview = new PlaneView(planeframe, player, job.homography);
+    
+    }
+    var tracks = new TrackCollection(player, planeview, job, autotracker);
     var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
-    var planeframe = $("#groundplane").get(0);
-    var planeview = new PlaneView(planeframe, player, tracks);
+    
+
 
     ui_setupbuttons(job, player, tracks, autotracker);
     ui_setupslider(player);
@@ -43,8 +49,7 @@ function ui_setup(job)
               "<td><div id='bottombar'></div></td>" + 
           "</tr>" +
           "<tr>" +
-              "<td><canvas id='groundplane' width='500' height='400'>Your browser does not support this visual.</canvas></td>" + 
-              "<td><div id='homography'></div></td>" + 
+              "<td><div id='groundplane' width='500' height='400'></div></td>" + 
           "</tr>" +
           "<tr>" +
               "<td><div id='advancedoptions'></div></td>" +
@@ -60,6 +65,13 @@ function ui_setup(job)
                           "height": job.height + "px",
                           "margin": "0 auto"})
                     .parent().css("width", playerwidth + "px");
+
+    $("#groundplane").css({"width": job.width + "px",
+                          "height": job.height + "px",
+                          "background-repeat": "no-repeat",
+                          "margin": "0 auto"})
+                    .parent().css("width", playerwidth + "px");
+
 
     $("#sidebar").css({"height": job.height + "px",
                        "width": "205px"});

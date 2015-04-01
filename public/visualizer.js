@@ -1,24 +1,13 @@
-function PlaneView(canvas, player, tracks, homography)
+function PlaneView(handle, player, homography)
 {
     var me = this;
 
-    this.canvas = canvas;
+    this.handle = handle;
     this.player = player;
-    this.tracks = tracks;
     this.homography = homography;
-    this.context = canvas.getContext('2d');
+    this.handle.css("background-image", "url('" + player.job.topimageurl + "')");
 
-    tracks.onnewobject.push(function(track) {
-        me.setuptrack(track);
-        me.draw(me.player.frame);
-    });
-
-    player.onupdate.push(function() {
-        me.draw(me.player.frame);
-    });
-
-    this.imagetoground = function(coord) {
-        return coord;
+    this.transformposition = function(coord) {
         return numeric.dot(this.homography, [coord[0], coord[1], 1]);
     }
 
@@ -34,13 +23,6 @@ function PlaneView(canvas, player, tracks, homography)
             this.context.arc(coord[0], coord[1], 10, 0, 2*Math.PI);
             this.context.stroke();
         }
-    }
-
-    this.setuptrack = function(track)
-    {
-        track.onupdate.push(function() {
-            me.draw(me.player.frame);
-        });
     }
 }
 

@@ -10,6 +10,7 @@ from vision.track.interpolation import LinearFill
 import random
 import logging
 import config
+import os
 
 logger = logging.getLogger("vatic.models")
 
@@ -74,9 +75,11 @@ class Video(turkic.database.Base):
         return count
 
     def gethomography(self):
-        if self.homographylocation is None:
-            return None
-        return np.load(self.homographylocation)
+        if self.homographylocation is not None:
+            path = os.path.join(self.homographylocation, "homography.npy")
+            if os.path.exists(path):
+                return np.load(path)
+        return None
 
 class Label(turkic.database.Base):
     __tablename__ = "labels"

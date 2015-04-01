@@ -124,7 +124,6 @@ class load(LoadCommand):
         parser.add_argument("--for-training-data", default = None)
         parser.add_argument("--blow-radius", default = 3)
         parser.add_argument("--run-initial-tracking", action="store_true")
-        parser.add_argument("--homography-location")
         return parser
 
     def title(self, args):
@@ -210,8 +209,7 @@ class load(LoadCommand):
                       completionbonus = args.completion_bonus,
                       trainwith = trainer,
                       isfortraining = args.for_training,
-                      blowradius = args.blow_radius,
-                      homographylocation = args.homography_location)
+                      blowradius = args.blow_radius)
 
         if args.for_training:
             video.trainvalidator = qa.tolerable(args.for_training_overlap,

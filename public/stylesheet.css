@@ -462,3 +462,25 @@ code
     border: 1px solid green; 
 }
 
+.toimagewaiting
+{
+    display: inline-block;
+    width: 500px;
+    height: 500px;
+    border: 3px dashed #999;
+    background-color: #FFF;
+}
+
+.toimageloaded
+{
+    border-width: 0px;
+}
+
+.hover
+{
+    border: 3px dashed #000;
+    background-color: #444;
+
+}
+
+

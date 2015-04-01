@@ -14,6 +14,7 @@ function Job(data)
     this.thisid = null;
     this.labels = null;
     this.homography = null;
+    this.topimageurl = null;
 
     this.frameurl = function(i)
     {
@@ -41,6 +42,7 @@ function job_import(data)
     job.attributes = data["attributes"];
     job.training = parseInt(data["training"]);
     job.homography = data["homography"]
+    job.topimageurl = "homographies/" + job.slug + "/topview.jpg";
 
     console.log("Job configured!");
     console.log("  Slug: " + job.slug);

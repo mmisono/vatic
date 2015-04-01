@@ -253,11 +253,12 @@ var track_collection_dump = null;
 /*
  * A collection of tracks.
  */
-function TrackCollection(player, job, autotracker)
+function TrackCollection(player, topviewplayer, job, autotracker)
 {
     var me = this;
 
     this.player = player;
+    this.topviewplayer = topviewplayer;
     this.job = job;
     this.tracks = [];
     this.autotracker = autotracker;
@@ -285,7 +286,7 @@ function TrackCollection(player, job, autotracker)
      */
     this.add = function(frame, position, color, existing)
     {
-        var track = new Track(this.player, color, position, this.autotracker, !existing);
+        var track = new Track(this.player, this.topviewplayer, color, position, this.autotracker, !existing);
         this.tracks.push(track);
 
         console.log("Added new track");
@@ -416,7 +417,7 @@ function TrackCollection(player, job, autotracker)
 /*
  * A track class.
  */
-function Track(player, color, position, autotracker, runtracking)
+function Track(player, topviewplayer, color, position, autotracker, runtracking)
 {
     var me = this;
 
@@ -424,8 +425,10 @@ function Track(player, color, position, autotracker, runtracking)
     this.attributejournals = {};
     this.label = null;
     this.player = player;
+    this.topviewplayer = topviewplayer;
     this.autotracker = autotracker;
     this.handle = null;
+    this.topviewhandle = null;
     this.color = color;
     this.htmloffset = 3;
     this.text = "";
@@ -725,10 +728,107 @@ function Track(player, color, position, autotracker, runtracking)
     this.draw = function(frame, position)
     {
         this.drawboundingbox(frame, position);
+        if (this.topviewplayer) {
+            this.drawtopmarker(frame, position);
+        }
     }
 
-    this.drawmarker = function(frame, position)
+    this.drawtopmarker = function(frame, position)
     {
+        if (this.topviewhandle == null)
+        {
+            this.topviewhandle = $('<div class="boundingbox"><div class="boundingboxtext"></div></div>');
+            this.topviewhandle.css("border-color", this.color);
+            var fill = $('<div class="fill"></div>').appendTo(this.topviewhandle);
+            fill.css("background-color", this.color);
+            this.topviewplayer.handle.append(this.topviewhandle);
+
+            this.topviewhandle.children(".boundingboxtext").hide().css({
+                "border-color": this.color,
+                //"color": this.color
+                });
+
+            this.topviewhandle.draggable({
+                start: function() {
+                    player.pause();
+                    me.notifystartupdate();
+                    //me.triggerinteract();
+                },
+                stop: function() { 
+                    me.fixposition();
+                    me.recordposition();                
+                    me.notifyupdate();
+                    eventlog("draggable", "Drag-n-drop a box");
+                },
+                cancel: ".boundingboxtext"
+            });
+
+            this.topviewhandle.mouseover(function() {
+                if (!me.locked && !me.drawingnew)
+                {
+                    for (var i in me.onmouseover)
+                    {
+                        me.onmouseover[i]();
+                    }
+                }
+            });
+
+            this.topviewhandle.mouseout(function() {
+                if (!me.locked && !me.drawingnew)
+                {
+                    for (var i in me.onmouseout)
+                    {
+                        me.onmouseout[i]();
+                    }
+                }
+            });
+
+            this.topviewhandle.click(function() {
+                me.triggerinteract();
+            });
+        }
+
+        if (position == null)
+        {
+            position = this.estimate(frame);
+        }
+
+        if (position.outside)
+        {
+            this.topviewhandle.hide();
+            return;
+        }
+
+        this.topviewhandle.show();
+        
+        if (position.occluded)
+        {
+            this.topviewhandle.addClass("boundingboxoccluded");
+        }
+        else
+        {
+            this.topviewhandle.removeClass("boundingboxoccluded");
+        }
+
+        if (position.generated)
+        {
+            this.topviewhandle.addClass("boundingboxgenerated");
+        } else
+        {
+            this.topviewhandle.removeClass("boundingboxgenerated");
+        }
+
+        var offset = this.topviewplayer.handle.offset();
+        var newpos = this.topviewplayer.transformposition([position.xbr, position.ybr]);
+        var newx = newpos[0] / newpos[2];
+        var newy = newpos[1] / newpos[2];
+
+        this.topviewhandle.css({
+            top: newy  + offset.top + "px",
+            left: newx + offset.left + "px",
+            width: (10 - this.htmloffset) + "px",
+            height: (10 - this.htmloffset) + "px"
+        });
     }
 
     this.drawboundingbox = function(frame, position)

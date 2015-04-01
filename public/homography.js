@@ -15,7 +15,6 @@ function boot()
             var video = new Video(data);
             var container = $("#container");
             var matcher = new Matcher(container, video);
-            matcher.start();
         });
     }
 }
@@ -26,7 +25,71 @@ function Video(data) {
     this.height = data["height"];
     this.homography = data["homography"];
     this.videoimageurl = "frames/" + this.slug + "/0/0/0.jpg";
-    this.topimageurl = "frames/" + this.slug + "/homography/topview.jpg";
+    this.topimageurl = "homographies/" + this.slug + "/topview.jpg";
+}
+
+function TopImage(handle, video, callback) {
+    var me = this;
+
+    this.handle = handle;
+    this.video = video;
+    this.callback = callback;
+    this.handle.addClass("toimagewaiting");
+    var imagetag = "<img id='toimage' src='#' />";
+    this.image = $(imagetag).appendTo(handle).hide();
+    this.imageset = false;
+
+    this.setupimage = function() {
+        this.handle.addClass("toimageloaded");
+        this.image.attr("src", me.video.topimageurl + "?" + new Date().getTime());
+        this.image.show();
+        this.imageset = true;
+        this.callback();
+    }
+
+    this.setupdroptarget = function() {
+        handle.on("dragover", function() {
+            me.handle.addClass("hover");
+            return false;
+        });
+
+        handle.on("dragend", function() {
+            me.handle.removeClass("hover");
+            return false;
+        });
+
+
+        handle.on("drop", function(e) {
+            e.preventDefault && e.preventDefault();
+            console.log(e);
+            var files = e.originalEvent.dataTransfer.files
+            var formdata = new FormData();
+            formdata.append("photo", files[0]);
+            $.ajax({
+                url: server_geturl("savetopview", [me.video.slug]),
+                type: "POST",             // Type of request to be send, called as method
+                data: formdata, // Data sent to server, a set of key/value pairs (i.e. form fields and values)
+                contentType: false,       // The content type used when sending data to the server.
+                cache: false,             // To unable request pages to be cached
+                processData:false,        // To send DOMDocument or non processed data file it is set to false
+                success: function(data)   // A function to be called if request succeeds
+                {
+                    console.log(data);
+                    me.setupimage();
+                }
+            });
+            return false;
+        });
+    }
+    
+    this.loadimage = function() {
+        if (me.video.homography) {
+            me.setupimage();
+        }
+    }
+
+    this.setupdroptarget();
+    this.loadimage();
 }
 
 function Matcher(container, video) {
@@ -37,53 +100,24 @@ function Matcher(container, video) {
 
     var videoimagetag = "<img id='fromimage' src='" + video.videoimageurl + "' width=" + video.width +" height=" + video.height + "/>";
     this.fromimage = $(videoimagetag).appendTo(this.container);
-    var topimagetag = "<img id='toimage' src='" + video.topimageurl + "?" + new Date().getTime() + "' />";
-    this.toimage = $(topimagetag).appendTo(this.container);
+    this.toimage = null;
+    var toimagecontainer = $("<div />").appendTo(this.container);
+    this.container.append("<br />");
+
     this.frompoints = [];
     this.topoints = [];
 
-    this.start = function ()
-    {
-        $.ajax({
-            url:me.video.topimageurl,
-            type:'HEAD', 
-            error:function(){
-                me.toimage.hide();
-                me.upload();
-            },
-            success:function(item){
-                console.log(item);
-            }
-        });
-    }
+    this.donebutton = $("<input type='button' id='donebutton' value='Done' />").appendTo(me.container).hide();
+    this.donebutton.click(function(){
+        me.computehomography();
+    });
 
-    this.upload = function ()
-    {
-        var toinputform = "<form id='toimageform' method=POST enctype=multipart/form-data action='" + 
-            server_geturl("savetopview", [this.video.slug]) +"'>" +
-            "<input type=file name=photo>" + 
-            "<input type='submit' id='uploadbutton' value='Upload'>" +
-            "</form>";
-        var toinput = $(toinputform).appendTo(this.container);
-        var startbutton = $("<input type='button' id='startbutton' value='start'>").appendTo(this.container).hide();
+    this.resetbutton = $("<input type='button' id='resetbutton' value='Reset' />").appendTo(me.container).hide();
+    this.resetbutton.click(function(){
+        me.reset();
+    });
 
-        $("#toimageform").on('submit',(function(e) {
-            e.preventDefault();
-            var url = server_geturl("savetopview", [me.video.slug]);
-            $.ajax({
-                url: url, // Url to which the request is send
-                type: "POST",             // Type of request to be send, called as method
-                data: new FormData(this), // Data sent to server, a set of key/value pairs (i.e. form fields and values)
-                contentType: false,       // The content type used when sending data to the server.
-                cache: false,             // To unable request pages to be cached
-                processData:false,        // To send DOMDocument or non processed data file it is set to false
-                success: function(data)   // A function to be called if request succeeds
-                {
-                    console.log(data);
-                }
-            });
-        }));
-    }
+
 
     this.reset = function() {
         me.frompoints = [];
@@ -96,7 +130,7 @@ function Matcher(container, video) {
         console.log(point);
         me.frompoints.push(point);
         me.toimage.click(me.toimageclicked);
-        me.fromimage.click(function(e){});
+        me.fromimage.off("click");
     }
 
     this.toimageclicked = function(e) {
@@ -107,23 +141,19 @@ function Matcher(container, video) {
             console.log("ERROR: invalid state");
         }
         if (me.topoints.length > 4) {
-            donebutton.show();
+            me.donebutton.show();
         }
-        me.toimage.click(function(e){});
-        me.fromimage.click(fromimageclicked);
+        me.toimage.off("click");
+        me.fromimage.click(me.fromimageclicked);
     }
 
     this.startmatching = function () {
-        var donebutton = $("<input type='button' id='donebutton' value='Done' />").appendTo(this.container).hide();
-        donebutton.click(function(){
-            me.computehomography();
-        });
-
-        var resetbutton = $("<input type='button' id='resetbutton' value='Reset' />").appendTo(this.container);
-        resetbutton.click(function(){
+        this.toimage = this.topimage.image;
+        this.topimage.callback = function() {
             me.reset();
-        });
-
+        }
+        this.resetbutton.show();
+        
         this.fromimage.click(me.fromimageclicked);
         this.toimage.click(function(e){});
     }
@@ -144,22 +174,20 @@ function Matcher(container, video) {
         // you can also calculate transform error for each point
         var error = new jsfeat.matrix_t(this.frompoints.length, 1, jsfeat.F32_t | jsfeat.C1_t);
         homo_kernel.error(this.frompoints, this.topoints, homo_transform, error.data, this.frompoints.length);
-        console.log(homo_transform);
-        var output = $("<div id='output'>"+ homo_transform.data +"</div>").appendTo(this.container).hide();
+        var data = homo_transform.data;
+        homography = [[data[0], data[1], data[2]], [data[3], data[4], data[5]], [data[6], data[7], data[8]]];
+        console.log(data);
+        console.log(homography);
+        server_post("savehomography", [this.video.slug], JSON.stringify(homography), function(data) {});
     }
 
-    this.readurl = function(input, image)
-    {
-        if (input.files && input.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                image.attr('src', e.target.result);
-            }
+    this.topimage = new TopImage(toimagecontainer, this.video, function() {});
 
-            reader.readAsDataURL(input.files[0]);
-        }
+    if (this.topimage.imageset) {
+        me.startmatching();
+    } else {
+        this.topimage.callback = function() {me.startmatching()};
     }
-
 }
 
 

@@ -1,6 +1,7 @@
 import os.path, sys, cgi, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+import cv2
 import config
 import tempfile
 from tracking import run_tracking
@@ -16,7 +17,7 @@ import subprocess
 import logging
 logger = logging.getLogger("vatic.server")
 
-HOMOGRAPHY_DIR = "homography"
+HOMOGRAPHY_DIR = "public/homographies"
 
 @handler()
 def getjob(id, verified):
@@ -242,8 +243,18 @@ def getvideo(slug):
         "slug": video.slug,
         "width": video.width,
         "height": video.height,
-        "homography":homography,
+        "homography": homography,
     }
+
+def makehomographydir(video):
+    savedir = os.path.join(HOMOGRAPHY_DIR, video.slug)
+    if not os.path.isdir(savedir):
+        os.makedirs(savedir)
+    absdir = os.path.abspath(savedir)
+    video.homographylocation = absdir
+    session.add(video)
+    session.commit()
+    return absdir
 
 @handler(post = "json")
 def savehomography(slug, homography):
@@ -252,13 +263,11 @@ def savehomography(slug, homography):
         raise ValueError("Invalid video slug")
     video = query[0]
 
-    base = video.location
-    savedir = os.path.join(base, HOMOGRAPHY_DIR)
-    if not os.path.isdir(savedir):
-        os.makedirs(savedir)
+    savedir = video.homographylocation
+    if savedir is None:
+        savedir = makehomographydir(video)
     savelocation = os.path.join(savedir, "homography.npy")
-    np.save(np.array(homography), savelocation)
-    video.homographylocation = savelocation
+    np.save(savelocation, np.array(homography))
     session.add(video)
     session.commit()
 
@@ -271,10 +280,9 @@ def savetopview(slug, image, environ):
         raise ValueError("Invalid video slug")
     video = query[0]
 
-    base = video.location
-    savedir = os.path.join(base, HOMOGRAPHY_DIR)
-    if not os.path.isdir(savedir):
-        os.makedirs(savedir)
+    savedir = video.homographylocation
+    if savedir is None:
+        savedir = makehomographydir(video)
 
     savelocation = os.path.join(savedir, "topview.jpg")
     tempformfile = tempfile.TemporaryFile()
@@ -286,12 +294,21 @@ def savetopview(slug, image, environ):
     tempformfile.close()
     outfile.close()
 
+    newimage = cv2.imread(savelocation)
+    scale = 1
+    if newimage.shape[0] >= newimage.shape[1] and newimage.shape[0] > video.height:
+        scale = float(video.height) / float(newimage.shape[0])
+    elif newimage.shape[0] < newimage.shape[1] and newimage.shape[1] > video.width:
+        scale = video.width / newimage.shape[1]
+    newimage = cv2.resize(newimage, (0, 0), None, scale, scale)
+    cv2.imwrite(savelocation, newimage)
+
 @handler(type="text/plain", jsonify=False)
 def videodump(slug, outputtype):
     query = session.query(Video).filter(Video.slug == slug)
     if query.count() != 1:
         raise ValueError("Invalid video slug")
-    dumpcall = ["turkic", "dump", slug]
+    dumpcall = ["turkic", "dump", slug, "--merge"]
     if outputtype == "json":
         dumpcall.append("--json")
     elif outputtype == "xml":

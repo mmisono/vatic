@@ -51,6 +51,16 @@ function buildlist(container, data) {
         titlecell.append(xmllink);
         titlecell.append("<br />");
 
+        var homographylink = $('<a>',{
+            text: "Edit homography",
+            title: "Edit homography",
+            href: "/homography.html?slug=" + video["slug"]
+        });
+        titlecell.append(homographylink);
+        titlecell.append("<br />");
+
+
+
         var headerrow = $("<tr />").appendTo(segmenttable);
         headerrow.append("<th>Sequence</th>");
         headerrow.append("<th>Start Frame</th>");
