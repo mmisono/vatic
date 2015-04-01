@@ -440,14 +440,19 @@ code
     z-index : 101;
 }
 
-.videorow
+.rowtitle
 {
     cursor:pointer;
 }
 
+.videolist
+{
+    list-style-type: none;
+}
+
 .videotable
 {
-    width: 600px;
+    width: 800px;
     border-collapse: collapse;
     text-align: center;
 }

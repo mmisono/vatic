@@ -11,6 +11,7 @@ import cStringIO
 from models import *
 import numpy as np
 import os
+import subprocess
 
 import logging
 logger = logging.getLogger("vatic.server")
@@ -284,5 +285,23 @@ def savetopview(slug, image, environ):
     shutil.copyfileobj(form['photo'].file, outfile)
     tempformfile.close()
     outfile.close()
+
+@handler(type="text/plain", jsonify=False)
+def videodump(slug, outputtype):
+    query = session.query(Video).filter(Video.slug == slug)
+    if query.count() != 1:
+        raise ValueError("Invalid video slug")
+    dumpcall = ["turkic", "dump", slug]
+    if outputtype == "json":
+        dumpcall.append("--json")
+    elif outputtype == "xml":
+        dumpcall.append("--xml")
+    video = query[0]
+    outfile = tempfile.TemporaryFile()
+    subprocess.call(dumpcall, stdout=outfile)
+    outfile.seek(0)
+    text = outfile.readlines()
+    outfile.close()
+    return text
 
 
