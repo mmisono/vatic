@@ -228,7 +228,6 @@ function TrackObject(job, player, container, color)
 
     this.tooltip = null;
     this.tooltiptimer = null;
-    this.trackingpane = null;
 
     this.initialize = function(id, track, tracks)
     {
@@ -274,7 +273,6 @@ function TrackObject(job, player, container, color)
 
         this.track.onupdate.push(function() {
             me.hidetooltip();
-            me.showtrackingpane();
             eventlog("interact", "Interact with box " + me.id);
         });
 
@@ -388,26 +386,6 @@ function TrackObject(job, player, container, color)
         });
     }
 
-    this.showtrackingpane = function() {
-        if (this.headerdetails && !this.trackingpane) {
-            this.trackingpane = $("<div id='trackobject" + this.id + "retrack' title='Retrack this object'>Retrack</div>").appendTo(this.headerdetails);
-            $("#trackobject" + this.id + "retrack").click(function() {
-                me.track.trackfromframe(me.player.frame);
-                me.hidetrackingpane();
-            });
-        }
-    }
-
-    this.hidetrackingpane = function() {
-        if (this.trackingpane != null)
-        {
-            this.trackingpane.slideUp(250, function() {
-                $(this).remove(); 
-            });
-            this.trackingpane = null;
-        }
-    }
-
     this.updateboxtext = function()
     {
         var str = "<strong>" + this.job.labels[this.label] + " " + (this.id + 1) + "</strong>";
@@ -435,6 +413,9 @@ function TrackObject(job, player, container, color)
     {
         this.details.append("<input type='checkbox' id='trackobject" + this.id + "lost'> <label for='trackobject" + this.id + "lost'>Outside of view frame</label><br>");
         this.details.append("<input type='checkbox' id='trackobject" + this.id + "occluded'> <label for='trackobject" + this.id + "occluded'>Occluded or obstructed</label><br>");
+        this.details.append("<input type='button' id='trackobject" + this.id + "trackforward' value='Track Forward'><br/>");
+        this.details.append("<input type='button' id='trackobject" + this.id + "trackbackward' value='Track Backward'><br/>");
+        this.details.append("<input type='button' id='trackobject" + this.id + "removeforward' value='Remove Forward'><br/>");
 
         for (var i in this.job.attributes[this.track.label])
         {
@@ -497,6 +478,16 @@ function TrackObject(job, player, container, color)
             {
                 eventlog("markocclusion", "Mark object as not occluded");
             }
+        });
+        $("#trackobject" + this.id + "trackforward").click(function() {
+            me.track.trackright();
+        });
+        $("#trackobject" + this.id + "trackbackward").click(function() {
+            me.track.trackleft();
+        
+        });
+        $("#trackobject" + this.id + "removeforward").click(function() {
+            me.track.clearforward();
         });
 
         this.player.onupdate.push(function() {

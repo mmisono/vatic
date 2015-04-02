@@ -1131,7 +1131,16 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         return new Position(xtl, ytl, xbr, ybr, occluded, outside, !user_frame);
     }
 
-    this.trackleft = function(frame, callback) {
+    this.clearforward = function() {
+        var frame = this.player.frame;
+        var bounds = this.journal.bounds(frame, false);
+        if (bounds['leftframe'] != frame && bounds['rightframe'] != frame) {
+            me.journal.mark(frame, this.pollposition());
+        }
+        this.journal.clearfromframe(frame);
+    }
+
+    this.trackleftfromframe = function(frame, callback) {
         var bounds = this.journal.bounds(frame-1, false);
         if (bounds['left'] == null || bounds['rightframe'] != frame) {
             callback();
@@ -1154,7 +1163,15 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         }
     }
 
-    this.trackright = function(frame, callback) {
+    this.trackright = function() {
+        this.trackrightfromframe(this.player.frame, function() {});
+    }
+
+    this.trackleft = function() {
+        this.trackleftfromframe(this.player.frame, function() {});
+    }
+
+    this.trackrightfromframe = function(frame, callback) {
         var bounds = this.journal.bounds(frame+1, false);
         if (bounds['leftframe'] != frame) {
             callback();
@@ -1203,11 +1220,11 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
                 me.notifydonetracking();
             }
         }
-        this.trackleft(frame, function() {
+        this.trackleftfromframe(frame, function() {
             leftdone = true;
             done();
         })
-        this.trackright(frame, function() {
+        this.trackrightfromframe(frame, function() {
             rightdone = true;
             done();
         })
