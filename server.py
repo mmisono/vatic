@@ -17,7 +17,7 @@ import subprocess
 import logging
 logger = logging.getLogger("vatic.server")
 
-HOMOGRAPHY_DIR = "public/homographies"
+HOMOGRAPHY_DIR = "homographies"
 
 @handler()
 def getjob(id, verified):
@@ -247,10 +247,11 @@ def getvideo(slug):
     }
 
 def makehomographydir(video):
+    logger.debug("cwd: {0}".format(os.getcwd()))
     savedir = os.path.join(HOMOGRAPHY_DIR, video.slug)
-    if not os.path.isdir(savedir):
-        os.makedirs(savedir)
     absdir = os.path.abspath(savedir)
+    if not os.path.isdir(absdir):
+        os.makedirs(absdir)
     video.homographylocation = absdir
     session.add(video)
     session.commit()
