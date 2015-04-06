@@ -33,18 +33,30 @@ class extract(Command):
         parser.add_argument("output")
         parser.add_argument("--width", default=720, type=int)
         parser.add_argument("--height", default=480, type=int)
+        parser.add_argument("--image-dir", action="store_true", default=False)
         parser.add_argument("--no-resize",
             action="store_true", default = False)
         parser.add_argument("--no-cleanup",
             action="store_true", default=False)
         return parser
 
+    def sequencefromdir(self, imagedir):
+        for imagename in os.listdir(imagedir):
+            imagepath = os.path.join(imagedir, imagename)
+            if not os.path.isfile(imagepath):
+                continue
+            yield Image.open(imagepath)
+
     def __call__(self, args):
         try:
             os.makedirs(args.output)
         except:
             pass
-        sequence = ffmpeg.extract(args.video)
+        sequence = []
+        if args.image_dir:
+            sequence = self.sequencefromdir(args.video)
+        else:
+            sequence = ffmpeg.extract(args.video)
         try:
             for frame, image in enumerate(sequence):
                 if frame % 100 == 0:
@@ -537,6 +549,67 @@ class visualize(DumpCommand):
                       text, font = font)
 
             yield aug, frame
+
+@handler("Load tracks from file")
+class loadtracks(Command):
+    def setup(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("slug")
+        parser.add_argument("labelfile")
+        return parser
+
+    def __call__(self, args):
+        # Input format:
+        # id xtl ytl xbr ybr frame occluded outside
+        video = session.query(Video).filter(Video.slug == args.slug)
+        if video.count() == 0:
+            print "Video {0} does not exist!".format(args.slug)
+            raise SystemExit()
+        video = video.one()
+
+        frametoboxes = {}
+        labelfile = open(args.labelfile, "r")
+        for line in labelfile:
+            split_line = line.split()
+            box = line.split()
+            frame = int(box[5])
+            if frame not in frametoboxes:
+                frametoboxes[frame] = []
+            frametoboxes[frame].append(box)
+
+        for segment in video.segments:
+            for job in segment.jobs:
+                boxidtopath = {}
+                for frame in range(segment.start, segment.stop):
+                    if frame not in frametoboxes:
+                        continue
+                    for boxdata in frametoboxes[frame]:
+                        boxid = boxdata[0]
+                        if boxid not in boxidtopath:
+                            query = session.query(Label).filter(Label.videoid == video.id).filter(Label.text == boxdata[8])
+                            if query.count() == 0:
+                                continue
+                            label = query.one()
+                            newpath = Path(job=job, label=label)
+                            boxidtopath[boxid] = newpath
+                            job.paths.append(newpath)
+
+                        path = boxidtopath[boxid]
+                        newbox = Box(path=path)
+
+                        newbox.xtl = max(int(boxdata[1]), 0)
+                        newbox.ytl = max(int(boxdata[2]), 0)
+                        newbox.xbr = max(int(boxdata[3]), 0)
+                        newbox.ybr = max(int(boxdata[4]), 0)
+                        newbox.occluded = int(boxdata[7])
+                        newbox.outside = int(boxdata[6])
+                        newbox.generated = False
+                        newbox.frame = frame
+
+                session.add(job)
+        session.commit()
+        labelfile.close()
+
 
 @handler("Dumps the tracking data")
 class dump(DumpCommand):
