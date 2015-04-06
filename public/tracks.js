@@ -602,8 +602,15 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         }
         pos = pos.clone();
         pos.occluded = value;
+        pos.generated = false;
         this.journal.mark(this.player.frame, pos);
         this.journal.artificialright = this.journal.rightmost();
+        var bounds = this.journal.bounds(this.player.frame + 1, false);
+        if (bounds['right']) {
+            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+        } else {
+            this.journal.clearfromframe(bounds['leftframe']);
+        }
         this.draw(this.player.frame, pos);
     }
 
@@ -621,6 +628,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             console.log("Marking object as not outside here.");
         }
 
+
         var pos = this.estimate(this.player.frame);
         if (pos == null)
         {
@@ -628,8 +636,15 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         }
         pos = pos.clone();
         pos.outside = value;
+        pos.generated = false;
         this.journal.mark(this.player.frame, pos);
         this.journal.artificialright = this.journal.rightmost();
+        var bounds = this.journal.bounds(this.player.frame + 1, false);
+        if (bounds['right']) {
+            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+        } else {
+            this.journal.clearfromframe(bounds['leftframe']);
+        }
         this.draw(this.player.frame, pos);
     }
 
@@ -1133,73 +1148,6 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         this.journal.clearfromframe(frame);
     }
 
-    
-    this.trackleftfromframe = function(frame, callback) {
-        var bounds = this.journal.bounds(frame-1, false);
-        if (bounds['left'] == null || bounds['rightframe'] != frame) {
-            callback();
-        } else {
-            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
-            this.autotracker.betweenframes(
-                bounds['leftframe'],
-                bounds['rightframe'],
-                bounds['left'],
-                bounds['right'],
-                function (data) {
-                    var path = data.boxes;
-                    for (var i = 1; i < path.length; i++)
-                    {
-                        me.journal.mark(path[i][4], Position.fromdata(path[i]));
-                    }
-                    callback(data);
-                }
-            );
-        }
-    }
-
-    
-    this.trackrightfromframe = function(frame, callback) {
-        var bounds = this.journal.bounds(frame+1, false);
-        if (bounds['leftframe'] != frame) {
-            callback();
-        } else if (bounds['right'] == null) {
-            this.journal.clearfromframe(frame);
-            this.autotracker.fromframe(
-                bounds['leftframe'],
-                bounds['left'],
-                function (data) {
-                    if (!data) {
-                        callback();
-                        return;
-                    }
-
-                    var path = data.boxes;
-                    for (var i = 1; i < path.length; i++)
-                    {
-                        me.journal.mark(path[i][4], Position.fromdata(path[i]));
-                    }
-                    callback(data);
-                }
-            );
-        } else {
-            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
-            this.autotracker.betweenframes(
-                bounds['leftframe'],
-                bounds['rightframe'],
-                bounds['left'],
-                bounds['right'],
-                function (data) {
-                    var path = data.boxes;
-                    for (var i = 1; i < path.length; i++)
-                    {
-                        me.journal.mark(path[i][4], Position.fromdata(path[i]));
-                    }
-                    callback(data);
-                }
-            );
-        }
-    }
-
     this.setuptracking = function() {
         this.setlock(true);
         this.notifystarttracking();
@@ -1270,6 +1218,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         var bounds = this.journal.bounds(frame+1, false);
 
         if (bounds['leftframe'] != frame) {
+            me.cleanuptracking();
             return;
         }
 
@@ -1283,35 +1232,6 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
                 me.cleanuptracking();
             }
         );
-    }
-
-    this.trackleft = function() {
-        this.setuptracking();
-        this.trackleftfromframe(this.player.frame, function() {
-            me.cleanuptracking();
-        });
-    }
-
-
-    this.trackfromframe = function(frame, callback) {
-        this.setlock(true);
-        this.notifystarttracking();
-        var leftdone = false;
-        var rightdone = false;
-        function done() {
-            if (rightdone && leftdone) {
-                me.setlock(false);
-                me.notifydonetracking();
-            }
-        }
-        this.trackleftfromframe(frame, function() {
-            leftdone = true;
-            done();
-        })
-        this.trackrightfromframe(frame, function() {
-            rightdone = true;
-            done();
-        })
     }
 
     this.draw(this.player.frame);
