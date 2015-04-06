@@ -262,6 +262,7 @@ function TrackCollection(player, topviewplayer, job, autotracker)
     this.job = job;
     this.tracks = [];
     this.autotracker = autotracker;
+    this.autotrack = true;
 
     this.onnewobject = []; 
 
@@ -286,7 +287,7 @@ function TrackCollection(player, topviewplayer, job, autotracker)
      */
     this.add = function(frame, position, color, existing)
     {
-        var track = new Track(this.player, this.topviewplayer, color, position, this.autotracker, !existing);
+        var track = new Track(this.player, this.topviewplayer, color, position, this.autotracker, (!existing && this.autotrack));
         this.tracks.push(track);
 
         console.log("Added new track");
@@ -502,12 +503,6 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
      * Polls the on screen position and marks it in the journal.
      */
     this.recordposition = function()
-    {
-        this.journal.mark(this.player.frame, this.pollposition());
-        this.journal.artificialright = this.journal.rightmost();
-    }
-
-    this.settrackframe = function()
     {
         this.journal.mark(this.player.frame, this.pollposition());
         this.journal.artificialright = this.journal.rightmost();
@@ -1126,20 +1121,19 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             outside = bounds['left'].outside;
 //        }
 
-        user_frame = ((Math.abs(bounds['leftframe'] - frame) < 2) && !bounds['left'].generated)
-         || (Math.abs(bounds['rightframe'] - frame) < 2 && !bounds['right'].generated)
-        return new Position(xtl, ytl, xbr, ybr, occluded, outside, !user_frame);
+        var userframe = ((Math.abs(bounds['leftframe'] - frame) < 2) && !bounds['left'].generated)
+            || (Math.abs(bounds['rightframe'] - frame) < 2 && !bounds['right'].generated)
+
+        return new Position(xtl, ytl, xbr, ybr, occluded, outside, !userframe);
     }
 
     this.clearforward = function() {
         var frame = this.player.frame;
-        var bounds = this.journal.bounds(frame, false);
-        if (bounds['leftframe'] != frame && bounds['rightframe'] != frame) {
-            me.journal.mark(frame, this.pollposition());
-        }
+        this.recordposition();
         this.journal.clearfromframe(frame);
     }
 
+    
     this.trackleftfromframe = function(frame, callback) {
         var bounds = this.journal.bounds(frame-1, false);
         if (bounds['left'] == null || bounds['rightframe'] != frame) {
@@ -1163,14 +1157,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         }
     }
 
-    this.trackright = function() {
-        this.trackrightfromframe(this.player.frame, function() {});
-    }
-
-    this.trackleft = function() {
-        this.trackleftfromframe(this.player.frame, function() {});
-    }
-
+    
     this.trackrightfromframe = function(frame, callback) {
         var bounds = this.journal.bounds(frame+1, false);
         if (bounds['leftframe'] != frame) {
@@ -1181,6 +1168,11 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
                 bounds['leftframe'],
                 bounds['left'],
                 function (data) {
+                    if (!data) {
+                        callback();
+                        return;
+                    }
+
                     var path = data.boxes;
                     for (var i = 1; i < path.length; i++)
                     {
@@ -1208,10 +1200,102 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         }
     }
 
+    this.setuptracking = function() {
+        this.setlock(true);
+        this.notifystarttracking();
+    }
+
+    this.recordtrackdata = function(data) {
+        if (!data) return;
+
+        var path = data.boxes;
+        for (var i = 1; i < path.length; i++)
+        {
+            me.journal.mark(path[i][4], Position.fromdata(path[i]));
+        }
+    }
+
+    this.cleanuptracking = function() {
+        me.setlock(false);
+        me.notifydonetracking();
+    }
+
+    this.tracktopreviouskeyframe = function() {
+        var frame = this.player.frame;
+        var bounds = this.journal.bounds(frame-1, false);
+        if (bounds['left'] == null || bounds['rightframe'] != frame) {
+            console.log("No previous key frame");
+            return;
+        } 
+
+        this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+        this.autotracker.betweenframes(
+            bounds['leftframe'],
+            bounds['rightframe'],
+            bounds['left'],
+            bounds['right'],
+            function (data) {
+                me.recordtrackdata(data);
+                me.cleanuptracking();
+            }
+        );
+    }
+
+    this.tracktonextkeyframe = function() {
+        var frame = this.player.frame;
+        var bounds = this.journal.bounds(frame+1, false);
+        if (bounds['leftframe'] != frame) {
+            return;
+        } else if (bounds['right'] == null) {
+            this.tracktoend();
+            return;
+        }
+
+        this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+        this.autotracker.betweenframes(
+            bounds['leftframe'],
+            bounds['rightframe'],
+            bounds['left'],
+            bounds['right'],
+            function (data) {
+                me.recordtrackdata(data);
+                me.cleanuptracking();
+            }
+        );
+    }
+
+    this.tracktoend = function() {
+        var frame = this.player.frame;
+        this.setuptracking();
+        var bounds = this.journal.bounds(frame+1, false);
+
+        if (bounds['leftframe'] != frame) {
+            return;
+        }
+
+        this.recordposition();
+        this.journal.clearfromframe(frame);
+        this.autotracker.fromframe(
+            bounds['leftframe'],
+            bounds['left'],
+            function (data) {
+                me.recordtrackdata(data);
+                me.cleanuptracking();
+            }
+        );
+    }
+
+    this.trackleft = function() {
+        this.setuptracking();
+        this.trackleftfromframe(this.player.frame, function() {
+            me.cleanuptracking();
+        });
+    }
+
+
     this.trackfromframe = function(frame, callback) {
         this.setlock(true);
         this.notifystarttracking();
-        var oldtext = this.text;
         var leftdone = false;
         var rightdone = false;
         function done() {
@@ -1232,7 +1316,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
 
     this.draw(this.player.frame);
     if (runtracking) {
-        this.trackfromframe(this.player.frame);
+        this.tracktoend(this.player.frame);
     }
 }
 
@@ -1245,6 +1329,7 @@ function Journal(start, blowradius)
     this.artificialright = null;
     this.artificialrightframe = null;
     this.blowradius = blowradius;
+    //this.generatedblowradius = this.blowradius * 3;
     this.start = start;
 
     /*
@@ -1258,6 +1343,8 @@ function Journal(start, blowradius)
 
         for (var i in this.annotations)
         {
+            //if (((Math.abs(i - frame) >= this.blowradius) && !this.annotations[i].generated) ||
+            //    ((Math.abs(i - frame) >= this.generatedblowradius) && this.annotations[i].generated))
             if (Math.abs(i - frame) >= this.blowradius)
             {
                 newannotations[i] = this.annotations[i];

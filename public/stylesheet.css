@@ -169,7 +169,17 @@ code
     float : right;
 }
 
+#opentrackingoptions
+{
+    float : right;
+}
+
 #advancedoptions
+{
+    float : right;
+}
+
+#trackingoptions
 {
     float : right;
 }

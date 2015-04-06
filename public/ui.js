@@ -48,12 +48,17 @@ function ui_setup(job)
           "<tr>" +
               "<td><div id='bottombar'></div></td>" + 
           "</tr>" +
-          "<tr>" +
-              "<td><div id='groundplane' width='500' height='400'></div></td>" + 
-          "</tr>" +
+          
           "<tr>" +
               "<td><div id='advancedoptions'></div></td>" +
               "<td><div id='submitbar'></div></td>" +
+          "</tr>" +
+          "<tr>" +
+              "<td><div id='trackingoptions'></div></td>" +
+              "<td></td>" +
+          "</tr>" +
+            "<tr>" +
+              "<td><div id='groundplane' width='500' height='400'></div></td>" + 
           "</tr>" +
       "</table>").appendTo(screen).css("width", "100%");
 
@@ -89,7 +94,37 @@ function ui_setup(job)
 
     $("<div id='objectcontainer'></div>").appendTo("#sidebar");
 
-    $("<div class='button' id='openadvancedoptions'>Options</div>")
+    $("<div class='button' id='opentrackingoptions'>Tracking Options</div>")
+        .button({
+            icons: {
+                primary: "ui-icon-wrench"
+            }
+        }).appendTo($("#trackingoptions").parent()).click(function() {
+                eventlog("options", "Show tracking options");
+                $(this).remove();
+                $("#trackingoptions").show();
+            });
+
+    $("#trackingoptions").hide();
+    $("<label>").appendTo("#trackingoptions").attr("for", "forwardtrackingselect").text("Forward: ");
+    $("<select>").appendTo("#trackingoptions").attr("id", "forwardtrackingselect");
+    $("<option>").appendTo("#forwardtrackingselect").attr("value", "none").text("None");
+    for (var i in job.forwardtrackers) {
+        $("<option>").appendTo("#forwardtrackingselect").attr("value", job.forwardtrackers[i]).text(job.forwardtrackers[i]);
+    }
+
+    $("<label>").appendTo("#trackingoptions").attr("for", "bidirectionaltrackingselect").text("Bidirectional: ");
+    $("<select>").appendTo("#trackingoptions").attr("id", "bidirectionaltrackingselect");
+    $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", "none").text("None");
+    for (var i in job.forwardtrackers) {
+        $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", job.bidirectionaltrackers[i]).text(job.bidirectionaltrackers[i]);
+    }
+
+    $("#trackingoptions").append(
+        "<input type='checkbox' id='trackingoptionsautotrack'>" +
+        "<label for='trackingoptionsautotrack'>Track at start</label>");
+
+    $("<div class='button' id='openadvancedoptions'>Player Options</div>")
         .button({
             icons: {
                 primary: "ui-icon-wrench"
@@ -110,16 +145,7 @@ function ui_setup(job)
     "<input type='checkbox' id='annotateoptionshideboxtext'>" +
     "<label for='annotateoptionshideboxtext'>Hide Labels?</label> ");
 
-    $("#advancedoptions").append(
-    "<div id='trackingalgorithm'>" +
-    "<input type='radio' name='trackingalgorithm' " +
-        "value='forward' id='trackingalgorithmforward'>" +
-    "<label for='trackingalgorithmforward'>Forward Tracking</label>" +
-    "<input type='radio' name='trackingalgorithm' " +
-        "value='bidirectional' id='trackingalgorithmbidirectional' checked='checked'>" +
-    "<label for='trackingalgorithmbidirectional'>Bi Directional Tracking</label>" +
-    "</div>");
-
+    
     $("#advancedoptions").append(
     "<div id='speedcontrol'>" +
     "<input type='radio' name='speedcontrol' " +
@@ -241,6 +267,41 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         }
         eventlog("speedcontrol", "FPS = " + player.fps + " and delta = " + player.playdelta);
     });
+
+    $("#trackingoptionsautotrack").button().click(function() {
+        var autotrack = $(this).attr("checked") ? false : true;
+        tracks.autotrack = autotrack;
+
+        if (autotrack)
+        {
+            eventlog("disabletrackatstart", "Objects will now be tracked on creation");
+        }
+        else
+        {
+            eventlog("disabletrackatstart", "Objects will not be tracked on creation");
+        }
+    });
+
+    //$("#forwardtrackingselect").selectmenu();
+    $("#forwardtrackingselect").change(function() {
+        var value = $("#forwardtrackingselect").val();
+        console.log("Forward tracker: " + value);
+        if (value === "none") {
+            autotracker.forwardtracker = null;
+        } else {
+            autotracker.forwardtracker = value;
+        }
+    })
+
+    $("#bidirectionaltrackingselect").change(function() {
+        var value = this.val();
+        console.log("Bidirectional tracker: " + value);
+        if (value === "none") {
+            autotracker.bidirectionaltracker = null;
+        } else {
+            autotracker.bidirectionaltracker = value;
+        }
+    })
 
     $("#trackingalgorithm").buttonset();
     $("input[name='trackingalgorithm']").click(function() {

@@ -52,7 +52,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
     {
         console.log("Received new track object drawing");
 
-        var track = tracks.add(player.frame, position, this.currentcolor[0]);
+        var track = tracks.add(player.frame, position, this.currentcolor[0], false);
 
         this.drawer.disable();
         ui_disable();
@@ -413,9 +413,24 @@ function TrackObject(job, player, container, color)
     {
         this.details.append("<input type='checkbox' id='trackobject" + this.id + "lost'> <label for='trackobject" + this.id + "lost'>Outside of view frame</label><br>");
         this.details.append("<input type='checkbox' id='trackobject" + this.id + "occluded'> <label for='trackobject" + this.id + "occluded'>Occluded or obstructed</label><br>");
-        this.details.append("<input type='button' id='trackobject" + this.id + "trackforward' value='Track Forward'><br/>");
-        this.details.append("<input type='button' id='trackobject" + this.id + "trackbackward' value='Track Backward'><br/>");
-        this.details.append("<input type='button' id='trackobject" + this.id + "removeforward' value='Remove Forward'><br/>");
+        this.trackingdetails = $("<div style='float:left'></div>").appendTo(this.details);
+        this.trackingdetails.append("<div style='float:left;'>Tracking: </div>");
+        //this.trackingdetails.append("<div style='float:left; cursor:pointer;'>" + 
+        //    "<div class='ui-icon ui-icon-arrow-1-w' id='trackobject" + this.id + "trackbackward' title='Track to beginning'></div>" + 
+        //    "</div>");
+        this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
+            "<div class='ui-icon ui-icon-arrowstop-1-w' id='trackobject" + this.id + "trackbackwardstop' title='Track to previous key frame'></div>" + 
+            "</div>");
+        this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
+            "<div class='ui-icon ui-icon-arrowstop-1-e' id='trackobject" + this.id + "trackforwardstop' title='Track to next key frame'></div>" + 
+            "</div>");
+        this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
+            "<div class='ui-icon ui-icon-arrow-1-e' id='trackobject" + this.id + "trackforward' title='Track to end'></div>" + 
+            "</div>");
+        this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
+            "<div class='ui-icon ui-icon-scissors' id='trackobject" + this.id + "clearforward' title='Clear to end'></div>" + 
+            "</div>");
+        this.details.append("<br />");
 
         for (var i in this.job.attributes[this.track.label])
         {
@@ -480,13 +495,15 @@ function TrackObject(job, player, container, color)
             }
         });
         $("#trackobject" + this.id + "trackforward").click(function() {
-            me.track.trackright();
+            me.track.tracktoend();
         });
-        $("#trackobject" + this.id + "trackbackward").click(function() {
-            me.track.trackleft();
-        
+        $("#trackobject" + this.id + "trackforwardstop").click(function() {
+            me.track.tracktonextkeyframe();
         });
-        $("#trackobject" + this.id + "removeforward").click(function() {
+        $("#trackobject" + this.id + "trackbackwardstop").click(function() {
+            me.track.tracktopreviouskeyframe();
+        });
+        $("#trackobject" + this.id + "clearforward").click(function() {
             me.track.clearforward();
         });
 

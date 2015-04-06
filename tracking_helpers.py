@@ -107,9 +107,9 @@ def convert_track_to_path(track_start, track, job):
         if box.frame < first_frame:
             first_frame = box.frame
             first_rect = rect
-    if track_start > 0:
+    if track_start > job.segment.start:
         first_box = rect_to_box(first_rect, path, track_start)
-        first_box.frame = 0
+        first_box.frame = job.segment.start
         first_box.outside = 1
         path.boxes.append(first_box)
     return path

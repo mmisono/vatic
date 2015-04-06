@@ -15,6 +15,9 @@ function Job(data)
     this.labels = null;
     this.homography = null;
     this.topimageurl = null;
+    this.forwardtrackers = [];
+    this.bidirectionaltrackers = [];
+    this.fulltrackers = [];
 
     this.frameurl = function(i)
     {
@@ -43,6 +46,9 @@ function job_import(data)
     job.training = parseInt(data["training"]);
     job.homography = data["homography"]
     job.topimageurl = "homographies/" + job.slug + "/topview.jpg";
+    job.forwardtrackers = data["trackers"]["forward"];
+    job.bidirectionaltrackers = data["trackers"]["bidirectional"];
+    job.fulltrackers = data["trackers"]["full"];
 
     console.log("Job configured!");
     console.log("  Slug: " + job.slug);

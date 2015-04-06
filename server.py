@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import cv2
 import config
 import tempfile
-from tracking import run_tracking
+import tracking
 from tracking_helpers import convert_track_to_path
 from turkic.server import handler, application
 from turkic.database import session
@@ -49,20 +49,29 @@ def getjob(id, verified):
     if homography is not None:
         homography = homography.tolist()
 
-    return {"start":        segment.start,
-            "stop":         segment.stop,
-            "slug":         video.slug,
-            "width":        video.width,
-            "height":       video.height,
-            "skip":         video.skip,
-            "perobject":    video.perobjectbonus,
-            "completion":   video.completionbonus,
-            "blowradius":   video.blowradius,
-            "jobid":        job.id,
-            "training":     int(training),
-            "labels":       labels,
-            "attributes":   attributes,
-            "homography":   homography}
+    trackers = {
+        "forward": tracking.getforwardtrackers(),
+        "bidirectional": tracking.getbidirectionaltrackers(),
+        "full": tracking.getfulltrackers(),
+    }
+
+    return {
+        "start":        segment.start,
+        "stop":         segment.stop,
+        "slug":         video.slug,
+        "width":        video.width,
+        "height":       video.height,
+        "skip":         video.skip,
+        "perobject":    video.perobjectbonus,
+        "completion":   video.completionbonus,
+        "blowradius":   video.blowradius,
+        "jobid":        job.id,
+        "training":     int(training),
+        "labels":       labels,
+        "attributes":   attributes,
+        "homography":   homography,
+        "trackers":     trackers,
+    }
 
 @handler()
 def getboxesforjob(id):
@@ -151,18 +160,21 @@ def respawnjob(id):
     session.add(replacement)
     session.commit()
 
+
 @handler(post = "json")
-def trackfromframe(id, frame, algorithm, position):
+def trackforward(id, frame, tracker, position):
     frame = int(frame)
     job = session.query(Job).get(id)
     segment = job.segment
     video = segment.video
     xtl, ytl, xbr, ybr, occluded, outside, generated = position
 
-    logger.info("Job Id: {0}".format(id))
-    logger.info("Algorithm: {0}".format(algorithm))
+    print (frame, position)
 
-    tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
+    logger.info("Job Id: {0}".format(id))
+    logger.info("Algorithm: {0}".format(tracker))
+
+    tracks = tracking.runforwardtracker(tracker, frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
     path = convert_track_to_path(frame, tracks, job)
     attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
