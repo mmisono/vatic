@@ -115,7 +115,7 @@ function ui_setup(job)
     $("<label>").appendTo("#trackingoptions").attr("for", "bidirectionaltrackingselect").text("Bidirectional: ");
     $("<select>").appendTo("#trackingoptions").attr("id", "bidirectionaltrackingselect");
     $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", "none").text("None");
-    for (var i in job.forwardtrackers) {
+    for (var i in job.bidirectionaltrackers) {
         $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", job.bidirectionaltrackers[i]).text(job.bidirectionaltrackers[i]);
     }
 
@@ -294,7 +294,7 @@ function ui_setupbuttons(job, player, tracks, autotracker)
     })
 
     $("#bidirectionaltrackingselect").change(function() {
-        var value = this.val();
+        var value = $("#bidirectionaltrackingselect").val();
         console.log("Bidirectional tracker: " + value);
         if (value === "none") {
             autotracker.bidirectionaltracker = null;

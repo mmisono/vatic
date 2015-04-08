@@ -187,7 +187,7 @@ def trackforward(id, frame, tracker, position):
     }
 
 @handler(post = "json")
-def trackbetweenframes(id, leftframe, rightframe, algorithm, pos):
+def trackbetweenframes(id, leftframe, rightframe, tracker, pos):
     leftpos, rightpos = pos
     lxtl, lytl, lxbr, lybr, loccluded, loutside, lgenerated = leftpos
     rxtl, rytl, rxbr, rybr, roccluded, routside, rgenerated = rightpos
@@ -196,22 +196,22 @@ def trackbetweenframes(id, leftframe, rightframe, algorithm, pos):
 
     logger.info("Track from {0} to {1}".format(leftframe, rightframe))
     logger.info("Job Id: {0}".format(id))
-    logger.info("Algorithm: {0}".format(algorithm))
+    logger.info("Algorithm: {0}".format(tracker))
 
     job = session.query(Job).get(id)
     segment = job.segment
     video = segment.video
 
-    #tracks = run_tracking(frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
-    #path = convert_track_to_path(frame, tracks, job)
-    #attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
+    initialrect = (lxtl, lytl, lxbr-lxtl, lybr-lytl)
+    finalrect = (rxtl, rytl, rxbr-rxtl, rybr-rytl)
+    tracks = tracking.runbidirectionaltracker(tracker, leftframe, rightframe, video.location, initialrect, finalrect)
+    path = convert_track_to_path(leftframe, tracks, job)
+    attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
     return {
         "label": 0,
-        "boxes": [],
-        #"boxes": [tuple(x) for x in path.getboxes()],
-        #"attributes": attrs
-        "attributes": []
+        "boxes": [tuple(x) for x in path.getboxes()],
+        "attributes": attrs
     }
 
 @handler()

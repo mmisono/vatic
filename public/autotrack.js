@@ -15,9 +15,9 @@ function AutoTracker(job) {
         }
     }
 
-    this.betweenframes = function(leftframe, rightframe, leftpos, rightpos, callback) {
+    this.betweenframes = function(leftframe, leftpos, rightframe, rightpos, callback) {
         if (this.bidirectionaltracker) {
-            server_post("trackbetweenframes", [this.job.jobid, leftframe, rightframe, this.algorithm], "["+leftpos.serialize()+","+rightpos.serialize()+"]", function(data) {
+            server_post("trackbetweenframes", [this.job.jobid, leftframe, rightframe, this.bidirectionaltracker], "["+leftpos.serialize()+","+rightpos.serialize()+"]", function(data) {
                 console.log("Successful tracked object");
                 callback(data);
             });

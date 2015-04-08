@@ -613,12 +613,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         pos.generated = false;
         this.journal.mark(this.player.frame, pos);
         this.journal.artificialright = this.journal.rightmost();
-        var bounds = this.journal.bounds(this.player.frame + 1, false);
-        if (bounds['right']) {
-            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
-        } else {
-            this.journal.clearfromframe(bounds['leftframe']);
-        }
+        this.journal.cleartonextkeyframe(this.player.frame);
         this.draw(this.player.frame, pos);
     }
 
@@ -647,12 +642,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         pos.generated = false;
         this.journal.mark(this.player.frame, pos);
         this.journal.artificialright = this.journal.rightmost();
-        var bounds = this.journal.bounds(this.player.frame + 1, false);
-        if (bounds['right']) {
-            this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
-        } else {
-            this.journal.clearfromframe(bounds['leftframe']);
-        }
+        this.journal.cleartonextkeyframe(this.player.frame);
         this.draw(this.player.frame, pos);
     }
 
@@ -1147,10 +1137,10 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             outside = bounds['left'].outside;
 //        }
 
-        var userframe = ((Math.abs(bounds['leftframe'] - frame) < 2) && !bounds['left'].generated)
+        var keyframe = ((Math.abs(bounds['leftframe'] - frame) < 2) && !bounds['left'].generated)
             || (Math.abs(bounds['rightframe'] - frame) < 2 && !bounds['right'].generated)
 
-        return new Position(xtl, ytl, xbr, ybr, occluded, outside, !userframe);
+        return new Position(xtl, ytl, xbr, ybr, occluded, outside, !keyframe);
     }
 
     this.cleartoend = function() {
@@ -1182,20 +1172,23 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
 
     this.tracktopreviouskeyframe = function() {
         var frame = this.player.frame;
-        var bounds = this.journal.bounds(frame-1, false);
-        if (bounds['left'] == null || bounds['rightframe'] != frame) {
+        this.setuptracking();
+        this.recordposition();
+        var previouskeyframe = this.journal.previouskeyframe(frame);
+        if (previouskeyframe['pos'] == null) {
             console.log("No previous key frame");
             return;
         } 
 
-        this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+        this.journal.cleartopreviouskeyframe(frame);
         this.autotracker.betweenframes(
-            bounds['leftframe'],
-            bounds['rightframe'],
-            bounds['left'],
-            bounds['right'],
+            previouskeyframe['frame'],
+            previouskeyframe['pos'],
+            frame,
+            this.estimate(frame),
             function (data) {
                 me.recordtrackdata(data);
+                me.journal.artificialright = me.journal.rightmost();
                 me.cleanuptracking();
             }
         );
@@ -1203,22 +1196,23 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
 
     this.tracktonextkeyframe = function() {
         var frame = this.player.frame;
-        var bounds = this.journal.bounds(frame+1, false);
-        if (bounds['leftframe'] != frame) {
-            return;
-        } else if (bounds['right'] == null) {
+        this.setuptracking();
+        this.recordposition();
+        var nextkeyframe = this.journal.nextkeyframe(frame);
+        if (nextkeyframe['pos'] == null) {
             this.tracktoend();
             return;
         }
 
-        this.journal.clearbetweenframes(bounds['leftframe'], bounds['rightframe']);
+        this.journal.cleartonextkeyframe(frame);
         this.autotracker.betweenframes(
-            bounds['leftframe'],
-            bounds['rightframe'],
-            bounds['left'],
-            bounds['right'],
+            frame,
+            this.estimate(frame),
+            nextkeyframe['frame'],
+            nextkeyframe['pos'],
             function (data) {
                 me.recordtrackdata(data);
+                me.journal.artificialright = me.journal.rightmost();
                 me.cleanuptracking();
             }
         );
@@ -1228,12 +1222,11 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         var frame = this.player.frame;
         this.setuptracking();
         this.recordposition();
-        var bounds = this.journal.bounds(frame+1, false);
 
         this.journal.clearfromframe(frame);
         this.autotracker.fromframe(
-            bounds['leftframe'],
-            bounds['left'],
+            frame,
+            this.estimate(frame),
             function (data) {
                 me.recordtrackdata(data);
                 me.journal.artificialright = me.journal.rightmost();
@@ -1257,7 +1250,6 @@ function Journal(start, blowradius)
     this.artificialright = null;
     this.artificialrightframe = null;
     this.blowradius = blowradius;
-    //this.generatedblowradius = this.blowradius * 3;
     this.start = start;
 
     /*
@@ -1271,8 +1263,6 @@ function Journal(start, blowradius)
 
         for (var i in this.annotations)
         {
-            //if (((Math.abs(i - frame) >= this.blowradius) && !this.annotations[i].generated) ||
-            //    ((Math.abs(i - frame) >= this.generatedblowradius) && this.annotations[i].generated))
             if (Math.abs(i - frame) >= this.blowradius)
             {
                 newannotations[i] = this.annotations[i];
@@ -1292,11 +1282,86 @@ function Journal(start, blowradius)
         this.annotations[frame] = position;
     }
 
+    this.nextkeyframe = function(frame) {
+        var next = null;
+        var nexttime = 0;
+
+        for (t in this.annotations)
+        {
+            var item = this.annotations[t];
+            itemtime = parseInt(t);
+
+            if (itemtime > frame)
+            {
+                if (next == null || itemtime < nexttime) 
+                {
+                    next = item;
+                    nexttime = itemtime;;
+                }
+            }
+        }
+
+        return {'frame': nexttime,
+                'pos': next};
+    }
+
+    this.previouskeyframe = function(frame) {
+        var previous = null;
+        var previoustime = 0;
+
+        for (t in this.annotations)
+        {
+            var item = this.annotations[t];
+            itemtime = parseInt(t);
+
+            if (itemtime < frame)
+            {
+                if (previous == null || itemtime > previoustime) 
+                {
+                    previous = item;
+                    previoustime = itemtime;;
+                }
+            }
+        }
+
+        return {'frame': previoustime,
+                'pos': previous};
+    }
+
+    this.cleartonextkeyframe = function(frame) {
+        var nextkeyframe = this.nextkeyframe(frame);
+        if (nextkeyframe['pos'] == null) {
+            this.clearfromframe(frame);
+        } else {
+            this.clearbetweenframes(frame, nextkeyframe['frame']);
+        }
+    }
+
+    this.cleartopreviouskeyframe = function(frame) {
+        var previouskeyframe = this.previouskeyframe(frame);
+        if (previouskeyframe['pos'] == null) {
+            this.cleartobeginning(frame);
+        } else {
+            this.clearbetweenframes(previouskeyframe['frame'], frame);
+        }
+    }
+
     this.clearbetweenframes = function(frame1, frame2) {
         clearframes = []
         for (t in this.annotations) {
             time = parseInt(t);
             if (time > frame1 && time < frame2) clearframes.push(time);
+        }
+        for (t in clearframes) {
+            delete this.annotations[clearframes[t]];
+        }
+    }
+
+    this.cleartobeginning = function(frame) {
+        clearframes = []
+        for (t in this.annotations) {
+            time = parseInt(t);
+            if (time < frame) clearframes.push(time);
         }
         for (t in clearframes) {
             delete this.annotations[clearframes[t]];
@@ -1313,10 +1378,9 @@ function Journal(start, blowradius)
             delete this.annotations[clearframes[t]];
         }
     }
-    
-    this.bounds = function(frame, usegenerated)
+
+    this.bounds = function(frame)
     {
-        usegenerated = typeof usegenerated !== 'undefined' ? usegenerated : true;
         if (this.annotations[frame])
         {
             var item = this.annotations[frame];
@@ -1335,10 +1399,6 @@ function Journal(start, blowradius)
         {
             var item = this.annotations[t];
             itemtime = parseInt(t);
-
-            if (!usegenerated && item.generated == true) {
-                continue;
-            }
 
             if (itemtime <= frame)
             {
