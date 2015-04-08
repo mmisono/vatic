@@ -300,6 +300,14 @@ function TrackCollection(player, topviewplayer, job, autotracker)
         return track;
     }
 
+    this.removeall = function()
+    {
+        for (var i in this.tracks)
+        {
+            this.tracks[i].remove();
+        }
+    }
+
     /*
      * Changes the draggable functionality. If true, allow dragging,
      * otherwise disable.
@@ -1084,6 +1092,9 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     this.remove = function()
     {
         this.handle.remove();
+        if (this.topviewhandle) {
+            this.topviewhandle.remove();
+        }
         this.deleted = true;
     }
 
@@ -1142,10 +1153,11 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         return new Position(xtl, ytl, xbr, ybr, occluded, outside, !userframe);
     }
 
-    this.clearforward = function() {
+    this.cleartoend = function() {
         var frame = this.player.frame;
         this.recordposition();
         this.journal.clearfromframe(frame);
+        this.journal.artificialright = this.journal.rightmost();
     }
 
     this.setuptracking = function() {
@@ -1215,20 +1227,16 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     this.tracktoend = function() {
         var frame = this.player.frame;
         this.setuptracking();
+        this.recordposition();
         var bounds = this.journal.bounds(frame+1, false);
 
-        if (bounds['leftframe'] != frame) {
-            me.cleanuptracking();
-            return;
-        }
-
-        this.recordposition();
         this.journal.clearfromframe(frame);
         this.autotracker.fromframe(
             bounds['leftframe'],
             bounds['left'],
             function (data) {
                 me.recordtrackdata(data);
+                me.journal.artificialright = me.journal.rightmost();
                 me.cleanuptracking();
             }
         );
@@ -1363,11 +1371,12 @@ function Journal(start, blowradius)
     {
         var item = null
         var itemtime = null;
-        for (var t in this.annotations)
+        for (var idx in this.annotations)
         {
+            var t = parseInt(idx);
             if (itemtime == null || t > itemtime)
             {
-                item = this.annotations[t];
+                item = this.annotations[idx];
                 itemtime = t;
             }
         }

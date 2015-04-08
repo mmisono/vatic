@@ -85,7 +85,7 @@ def convert_to_db(paths, job, label):
         paths_db.append(path_db)
     return paths_db
 
-def rect_to_box(rect, path, track_start):
+def recttobox(rect, path, track_start):
     box = Box(path = path)
     box.xtl = rect['rect'][0]
     box.ytl = rect['rect'][1]
@@ -99,19 +99,8 @@ def rect_to_box(rect, path, track_start):
 
 def convert_track_to_path(track_start, track, job):
     path = Path(job = job)
-    first_frame = job.segment.stop
-    first_rect = None
     for rect in track:
-        box = rect_to_box(rect, path, track_start)
-        path.boxes.append(box)
-        if box.frame < first_frame:
-            first_frame = box.frame
-            first_rect = rect
-    if track_start > job.segment.start:
-        first_box = rect_to_box(first_rect, path, track_start)
-        first_box.frame = job.segment.start
-        first_box.outside = 1
-        path.boxes.append(first_box)
+        path.boxes.append(recttobox(rect, path, track_start))
     return path
 
 def get_paths(v):

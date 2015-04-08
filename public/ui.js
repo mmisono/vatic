@@ -14,12 +14,11 @@ function ui_build(job)
     }
     var tracks = new TrackCollection(player, planeview, job, autotracker);
     var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
-    
-
 
     ui_setupbuttons(job, player, tracks, autotracker);
     ui_setupslider(player);
     ui_setupsubmit(job, tracks);
+    ui_setupclear(objectui);
     ui_setupclickskip(job, player, tracks, objectui);
     ui_setupkeyboardshortcuts(job, player);
     ui_loadprevious(job, objectui);
@@ -163,6 +162,7 @@ function ui_setup(job)
     "</div>");
 
     $("#submitbar").append("<div id='submitbutton' class='button'>Submit HIT</div>");
+    $("#submitbar").append("<div id='clearbutton' class='button'>Clear All</div>");
 
     if (mturk_isoffline())
     {
@@ -542,6 +542,20 @@ function ui_setupsubmit(job, tracks)
     });
 }
 
+function ui_setupclear(objectui)
+{
+    $("#clearbutton").button({
+        icons: {
+            primary: 'ui-icon-trash'
+        }
+    }).click(function() {
+        if (ui_disabled) return;
+        if (confirm("Are you sure you want to clear all tracks?")) objectui.removeall();
+    });
+}
+
+
+
 function ui_submit(job, tracks)
 {
     console.dir(tracks);
@@ -724,6 +738,7 @@ function ui_disable()
         $("#playbutton").button("option", "disabled", true);
         $("#rewindbutton").button("option", "disabled", true);
         $("#submitbutton").button("option", "disabled", true);
+        $("#clearbutton").button("option", "disabled", true);
         $("#playerslider").slider("option", "disabled", true);
 
         console.log("Disengaged UI");
@@ -740,6 +755,7 @@ function ui_enable()
         $("#playbutton").button("option", "disabled", false);
         $("#rewindbutton").button("option", "disabled", false);
         $("#submitbutton").button("option", "disabled", false);
+        $("#clearbutton").button("option", "disabled", false);
         $("#playerslider").slider("option", "disabled", false);
 
         console.log("Engaged UI");

@@ -121,6 +121,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         obj.statefolddown();
         obj.updatecheckboxes();
         obj.updateboxtext();
+        this.objects.push(obj);
         this.counter++;
 
         return obj;
@@ -150,6 +151,14 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         html += "</ul>";
 
         this.instructions = $(html).appendTo(this.container);
+    }
+
+    this.removeall = function()
+    {
+        for (var i in this.objects)
+        {
+            this.objects[i].remove();
+        }
     }
 
     this.disable = function()
@@ -504,7 +513,7 @@ function TrackObject(job, player, container, color)
             me.track.tracktopreviouskeyframe();
         });
         $("#trackobject" + this.id + "clearforward").click(function() {
-            me.track.clearforward();
+            me.track.cleartoend();
         });
 
         this.player.onupdate.push(function() {
