@@ -41,11 +41,17 @@ class extract(Command):
         return parser
 
     def sequencefromdir(self, imagedir):
+        lastframe = None
         for imagename in os.listdir(imagedir):
             imagepath = os.path.join(imagedir, imagename)
             if not os.path.isfile(imagepath):
                 continue
-            yield Image.open(imagepath)
+            try:
+                lastframe = Image.open(imagepath)
+                yield lastframe
+            except IOError:
+                print "Error loading image {0}. Using previous frame.".format(imagepath)
+                yield lastframe
 
     def __call__(self, args):
         try:
