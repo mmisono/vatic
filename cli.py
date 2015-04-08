@@ -559,6 +559,7 @@ class loadtracks(Command):
         parser.add_argument("--scale", "-s", default = 1.0, type = float)
         parser.add_argument("--dimensions", "-d", default = None)
         parser.add_argument("--original-video", "-v", default = None)
+        parser.add_argument("--original-frame", "-f", default = None)
         parser.add_argument("--json", "-j",
             action="store_true", default=False)
         parser.add_argument("--matlab", "-ml",
@@ -590,8 +591,9 @@ class loadtracks(Command):
             boxdict['ybr'] = int(ybr)
             boxdict['outside'] = int(lost)
             boxdict['occluded'] = int(occluded)
+            boxdict['generated'] = int(generated)
             boxdict['attributes'] = attributes
-            annotations['boxes'][int(frame)] = boxdict
+            annotations[boxid]['boxes'][int(frame)] = boxdict
         labelfile.close()
         return annotations
 
@@ -602,6 +604,7 @@ class loadtracks(Command):
             raise SystemExit()
         video = video.one()
 
+        print "Parsing text data"
         data = {}
         if args.json:
             data = self.getdatajson(args.labelfile)
@@ -609,19 +612,26 @@ class loadtracks(Command):
             data = self.getdatatext(args.labelfile)
 
         scale = args.scale
-        if args.dimensions or args.original_video:
+        if args.dimensions or args.original_video or args.original_frame:
+            print "Computing scale"
             if args.original_video:
                 w, h = ffmpeg.extract(args.original_video).next().size
+            elif args.original_frame:
+                w, h = Image.open(args.original_frame).size
             else:
                 w, h = args.dimensions.split("x")
             w = float(w)
             h = float(h)
-            s = video.width / w
+            s = float(video.width) / w
             if s * h > video.height:
-                s = video.height / h
+                s = float(video.height) / h
             scale = s
+            print "Scale = {0}".format(scale)
 
+        segmentcount = 0
         for segment in video.segments:
+            print "Segment {0} of {1}".format(segmentcount, len(video.segments))
+            segmentcount += 1
             for job in segment.jobs:
                 for boxid in data:
                     label = data[boxid]['label']
@@ -649,7 +659,7 @@ class loadtracks(Command):
                         newbox.frame = frame
 
                         scalebox = newbox.getbox()
-                        scalebox.transform(scale)
+                        scalebox = scalebox.transform(scale)
                         newbox.xtl = scalebox.xtl
                         newbox.ytl = scalebox.ytl
                         newbox.xbr = scalebox.xbr
