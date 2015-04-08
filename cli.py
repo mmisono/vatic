@@ -594,6 +594,14 @@ class loadtracks(Command):
             boxdict['generated'] = int(generated)
             boxdict['attributes'] = attributes
             annotations[boxid]['boxes'][int(frame)] = boxdict
+
+        for boxid, annotation in annotations.iteritems():
+            firstframe = min(annotation['boxes'].keys())
+            newboxdict = annotation['boxes'][firstframe].copy()
+            newboxdict['outside'] = 1
+            for i in range(0, firstframe, 5):
+                annotations[boxid]['boxes'][i] = newboxdict
+
         labelfile.close()
         return annotations
 
@@ -628,7 +636,7 @@ class loadtracks(Command):
             scale = s
             print "Scale = {0}".format(scale)
 
-        segmentcount = 0
+        segmentcount = 1
         for segment in video.segments:
             print "Segment {0} of {1}".format(segmentcount, len(video.segments))
             segmentcount += 1
