@@ -63,7 +63,10 @@ class extract(Command):
                     print ("Decoding frames {0} to {1}"
                         .format(frame, frame + 100))
                 if not args.no_resize:
-                    image.thumbnail((args.width, args.height), Image.BILINEAR)
+                    try:
+                        image.thumbnail((args.width, args.height), Image.BILINEAR)
+                    except IOError:
+                        print "ERROR: resizing image {0}".format(frame)
                 path = Video.getframepath(frame, args.output)
                 try:
                     image.save(path)
