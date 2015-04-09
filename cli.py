@@ -42,15 +42,15 @@ class extract(Command):
 
     def sequencefromdir(self, imagedir):
         lastframe = None
-        for imagename in os.listdir(imagedir):
-            imagepath = os.path.join(imagedir, imagename)
-            if not os.path.isfile(imagepath):
-                continue
+        imagefiles = [os.path.join(imagedir, f) for f in os.listdir(imagedir)]
+        imagefiles = [f for f in imagefiles if os.path.isfile(f)]
+        imagefiles = sorted(imagefiles)
+        for imagepath in imagefiles:
             try:
                 lastframe = Image.open(imagepath)
                 yield lastframe
             except IOError:
-                print "Error loading image {0}. Using previous frame.".format(imagepath)
+                print "Error loading image {0}. Trying previous frame.".format(imagepath)
                 yield lastframe
 
     def __call__(self, args):
