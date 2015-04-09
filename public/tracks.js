@@ -442,6 +442,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     this.htmloffset = 3;
     this.text = "";
     this.deleted = false;
+    this.offset = 0;
 
     this.onmouseover = [];
     this.onmouseout = [];
@@ -917,6 +918,8 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             this.handle.click(function() {
                 me.triggerinteract();
             });
+
+            this.offset = this.player.handle.offset();
         }
 
         if (position == null)
@@ -949,11 +952,10 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             this.handle.removeClass("boundingboxgenerated");
         }
 
-        var offset = this.player.handle.offset();
 
         this.handle.css({
-            top: position.ytl + offset.top + "px",
-            left: position.xtl + offset.left + "px",
+            top: position.ytl + this.offset.top + "px",
+            left: position.xtl + this.offset.left + "px",
             width: (position.width - this.htmloffset) + "px",
             height: (position.height - this.htmloffset) + "px"
         });

@@ -111,12 +111,18 @@ function ui_setup(job)
     for (var i in job.forwardtrackers) {
         $("<option>").appendTo("#forwardtrackingselect").attr("value", job.forwardtrackers[i]).text(job.forwardtrackers[i]);
     }
+    if (job.forwardtrackers.length > 0) {
+        $("#forwardtrackingselect").val(job.forwardtrackers[0]);
+    }
 
     $("<label>").appendTo("#trackingoptions").attr("for", "bidirectionaltrackingselect").text("Bidirectional: ");
     $("<select>").appendTo("#trackingoptions").attr("id", "bidirectionaltrackingselect");
     $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", "none").text("None");
     for (var i in job.bidirectionaltrackers) {
         $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", job.bidirectionaltrackers[i]).text(job.bidirectionaltrackers[i]);
+    }
+    if (job.bidirectionaltrackers.length > 0) {
+        $("#bidirectionaltrackingselect").val(job.bidirectionaltrackers[0]);
     }
 
     $("#trackingoptions").append(
