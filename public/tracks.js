@@ -691,9 +691,11 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     {
         if (this.handle != null)
         {
-            this.text = value;
-            var t = this.handle.children(".boundingboxtext");
-            t.html(this.text).show();
+            if (value != this.text) {
+                this.text = value;
+                var t = this.handle.children(".boundingboxtext");
+                t.html(this.text).show();
+            }
         }
 
     }
