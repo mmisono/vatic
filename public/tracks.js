@@ -366,6 +366,7 @@ function TrackCollection(player, topviewplayer, job, autotracker)
      */
     this.update = function(frame)
     {
+        this.topviewplayer.clear();
         for (var i in this.tracks)
         {
             this.tracks[i].draw(frame);
@@ -741,7 +742,13 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         this.drawboundingbox(frame, position);
         if (this.topviewplayer) {
             this.drawtopmarker(frame, position);
+            this.drawtrajectory();
         }
+    }
+
+    this.drawtrajectory = function()
+    {
+        this.topviewplayer.drawtrajectory(this);
     }
 
     this.drawtopmarker = function(frame, position)
@@ -835,8 +842,8 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         var newy = newpos[1] / newpos[2];
 
         this.topviewhandle.css({
-            top: newy  + offset.top + "px",
-            left: newx + offset.left + "px",
+            top: newy  + offset.top - 5 + "px",
+            left: newx + offset.left - 5 + "px",
             width: (10 - this.htmloffset) + "px",
             height: (10 - this.htmloffset) + "px"
         });
@@ -1190,6 +1197,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             previouskeyframe['pos'],
             frame,
             this.estimate(frame),
+            this.label,
             function (data) {
                 me.recordtrackdata(data);
                 me.journal.artificialright = me.journal.rightmost();
@@ -1214,6 +1222,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             this.estimate(frame),
             nextkeyframe['frame'],
             nextkeyframe['pos'],
+            this.label,
             function (data) {
                 me.recordtrackdata(data);
                 me.journal.artificialright = me.journal.rightmost();
@@ -1231,6 +1240,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         this.autotracker.fromframe(
             frame,
             this.estimate(frame),
+            this.label,
             function (data) {
                 me.recordtrackdata(data);
                 me.journal.artificialright = me.journal.rightmost();
