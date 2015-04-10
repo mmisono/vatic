@@ -14,11 +14,15 @@ function ui_build(job)
     }
     var tracks = new TrackCollection(player, planeview, job, autotracker);
     var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
+    tracks.onnewobject.push(function(track) {
+        planeview.drawtrajectory(track);
+    });
 
     ui_setupbuttons(job, player, tracks, autotracker);
     ui_setupslider(player);
     ui_setupsubmit(job, tracks);
     ui_setupclear(objectui);
+    ui_setupfulltrack(objectui, autotracker, job);
     ui_setupclickskip(job, player, tracks, objectui);
     ui_setupkeyboardshortcuts(job, player);
     ui_loadprevious(job, objectui);
@@ -50,14 +54,13 @@ function ui_setup(job)
           
           "<tr>" +
               "<td><div id='advancedoptions'></div></td>" +
-              "<td><div id='submitbar'></div></td>" +
+              "<td rowspan='2'><div id='submitbar'></div></td>" +
           "</tr>" +
           "<tr>" +
               "<td><div id='trackingoptions'></div></td>" +
-              "<td></td>" +
           "</tr>" +
             "<tr>" +
-              "<td><div id='groundplane' width='500' height='400'></div></td>" + 
+              "<td><div id='groundplane'></div></td>" + 
           "</tr>" +
       "</table>").appendTo(screen).css("width", "100%");
 
@@ -169,6 +172,10 @@ function ui_setup(job)
 
     $("#submitbar").append("<div id='submitbutton' class='button'>Submit HIT</div>");
     $("#submitbar").append("<div id='clearbutton' class='button'>Clear All</div>");
+    $("#submitbar").append("<div id='fulltrackingbox'>");
+    $("<select>").appendTo("#fulltrackingbox").attr("id", "fulltrackingselect");
+    $("<option>").appendTo("#fulltrackingselect").attr("value", "none").text("None");
+    $("#fulltrackingbox").append("<div id='fulltrackingbutton' class='button'>Run Tracking</div>");
 
     if (mturk_isoffline())
     {
@@ -288,8 +295,7 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         }
     });
 
-    //$("#forwardtrackingselect").selectmenu();
-    $("#forwardtrackingselect").change(function() {
+    var forwardtrackingselected = function() {
         var value = $("#forwardtrackingselect").val();
         console.log("Forward tracker: " + value);
         if (value === "none") {
@@ -297,9 +303,11 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         } else {
             autotracker.forwardtracker = value;
         }
-    })
+    };
+    forwardtrackingselected();
+    $("#forwardtrackingselect").change(forwardtrackingselected);
 
-    $("#bidirectionaltrackingselect").change(function() {
+    var bidirectionaltrackingselected = function() {
         var value = $("#bidirectionaltrackingselect").val();
         console.log("Bidirectional tracker: " + value);
         if (value === "none") {
@@ -307,7 +315,10 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         } else {
             autotracker.bidirectionaltracker = value;
         }
-    })
+    };
+    bidirectionaltrackingselected();
+
+    $("#bidirectionaltrackingselect").change(bidirectionaltrackingselected);
 
     $("#trackingalgorithm").buttonset();
     $("input[name='trackingalgorithm']").click(function() {
@@ -557,6 +568,43 @@ function ui_setupclear(objectui)
     }).click(function() {
         if (ui_disabled) return;
         if (confirm("Are you sure you want to clear all tracks?")) objectui.removeall();
+    });
+}
+
+function ui_setupfulltrack(objectui, autotracker, job)
+{
+    var fulltrackingselected = function() {
+        var value = $("#fulltrackingselect").val();
+        console.log("Full tracker: " + value);
+        if (value === "none") {
+            autotracker.fulltracker = null;
+        } else {
+            autotracker.fulltracker = value;
+        }
+    };
+    fulltrackingselected();
+    $("#fulltrackingselect").change(fulltrackingselected);
+
+    for (var i in job.fulltrackers) {
+        $("<option>").appendTo("#fulltrackingselect").attr("value", job.fulltrackers[i]).text(job.fulltrackers[i]);
+    }
+
+    $("#fulltrackingbutton").button({
+        icons: {
+            primary: 'ui-icon-shuffle'
+        }
+    }).click(function() {
+        if (ui_disabled) return;
+        if ($("#fulltrackingselect").val() == "none") return;
+        autotracker.full(function(data) {
+            for (var i in data)
+            {
+                objectui.injectnewobject(data[i]["label"],
+                                         data[i]["boxes"],
+                                         data[i]["attributes"]);
+            }
+
+        });
     });
 }
 

@@ -162,19 +162,21 @@ def respawnjob(id):
 
 
 @handler(post = "json")
-def trackforward(id, frame, tracker, position):
+def trackforward(id, frame, tracker, label, position):
     frame = int(frame)
     job = session.query(Job).get(id)
     segment = job.segment
     video = segment.video
     xtl, ytl, xbr, ybr, occluded, outside, generated = position
-
-    print (frame, position)
+    labelquery = session.query(Label).get(label)
+    labeltext = ""
+    if labelquery is not None:
+        labeltext = labelquery.text
 
     logger.info("Job Id: {0}".format(id))
     logger.info("Algorithm: {0}".format(tracker))
 
-    tracks = tracking.runforwardtracker(tracker, frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
+    tracks = tracking.runforwardtracker(tracker, labeltext, frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
     path = convert_track_to_path(frame, tracks, job)
     attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
@@ -186,13 +188,28 @@ def trackforward(id, frame, tracker, position):
         "attributes": attrs
     }
 
+@handler()
+def trackfull(id, tracker):
+    job = session.query(Job).get(id)
+    segment = job.segment
+    video = segment.video
+    tracks = tracking.runfulltracker(tracker, segment.start, segment.stop, video.location)
+    allpaths = [convert_track_to_path(segment.start, track, job) for track in tracks]
+    allattrs = [[(x.attributeid, x.frame, x.value) for x in path.attributes] for path in allpaths]
+    return [{
+        "label": 0,
+        "boxes":[tuple(x) for x in path.getboxes()],
+        "attributes":attrs,
+    } for path, attrs in zip(allpaths, allattrs)]
+
 @handler(post = "json")
-def trackbetweenframes(id, leftframe, rightframe, tracker, pos):
+def trackbetweenframes(id, leftframe, rightframe, tracker, label, pos):
     leftpos, rightpos = pos
     lxtl, lytl, lxbr, lybr, loccluded, loutside, lgenerated = leftpos
     rxtl, rytl, rxbr, rybr, roccluded, routside, rgenerated = rightpos
     leftframe = int(leftframe)
     rightframe = int(rightframe)
+    labeltext = session.query(Label).get(label).text
 
     logger.info("Track from {0} to {1}".format(leftframe, rightframe))
     logger.info("Job Id: {0}".format(id))
@@ -204,7 +221,7 @@ def trackbetweenframes(id, leftframe, rightframe, tracker, pos):
 
     initialrect = (lxtl, lytl, lxbr-lxtl, lybr-lytl)
     finalrect = (rxtl, rytl, rxbr-rxtl, rybr-rytl)
-    tracks = tracking.runbidirectionaltracker(tracker, leftframe, rightframe, video.location, initialrect, finalrect)
+    tracks = tracking.runbidirectionaltracker(tracker, labeltext, leftframe, rightframe, video.location, initialrect, finalrect)
     path = convert_track_to_path(leftframe, tracks, job)
     attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
@@ -214,6 +231,7 @@ def trackbetweenframes(id, leftframe, rightframe, tracker, pos):
         "attributes": attrs
     }
 
+""" ADMIN PAGE """
 @handler()
 def getallvideos():
     query = session.query(Video)
@@ -241,6 +259,8 @@ def getallvideos():
         videos.append(newvideo)
     return videos
 
+
+""" HOMOGRAPHY PAGE """
 @handler()
 def getvideo(slug):
     query = session.query(Video).filter(Video.slug == slug)
@@ -309,11 +329,14 @@ def savetopview(slug, image, environ):
 
     newimage = cv2.imread(savelocation)
     scale = 1
-    if newimage.shape[0] >= newimage.shape[1] and newimage.shape[0] > video.height:
+    if newimage.shape[1] > video.width:
+        scale = float(video.width) / float(newimage.shape[1])
+        newimage = cv2.resize(newimage, (0, 0), None, scale, scale)
+
+    if newimage.shape[0] > video.height:
         scale = float(video.height) / float(newimage.shape[0])
-    elif newimage.shape[0] < newimage.shape[1] and newimage.shape[1] > video.width:
-        scale = video.width / newimage.shape[1]
-    newimage = cv2.resize(newimage, (0, 0), None, scale, scale)
+        newimage = cv2.resize(newimage, (0, 0), None, scale, scale)
+
     cv2.imwrite(savelocation, newimage)
 
 @handler(type="text/plain", jsonify=False)
