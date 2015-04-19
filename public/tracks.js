@@ -536,12 +536,17 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             height = 1;
         }
 
-        var xtl = pos.left - offset.left - 5;
-        var ytl = pos.top - offset.top - 5;
-        var xbr = xtl + width + this.htmloffset;
-        var ybr = ytl + height + this.htmloffset;
-
         var estimate = this.estimate(this.player.frame);
+
+        var x = pos.left - offset.left + 5 + this.htmloffset;
+        var y = pos.top - offset.top + 5 + this.htmloffset;
+
+        var newpos = this.topviewplayer.invtransformposition([x, y]);
+        var xbr = newpos[0] / newpos[2];
+        var ybr = newpos[1] / newpos[2];
+        var xtl = xbr - estimate.width;
+        var ytl = ybr - estimate.height;
+
         var position = new Position(xtl, ytl, xbr, ybr)
         position.occluded = estimate.occluded;
         position.outside = estimate.outside;
@@ -559,13 +564,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
 
     this.recordtopviewposition = function()
     {
-        var position = this.polltopviewposition();
-        var newpos = this.topviewplayer.invtransformposition([position.xbr, position.ybr]);
-        var newx = newpos[0] / newpos[2];
-        var newy = newpos[1] / newpos[2];
-        position.xbr = newx;
-        position.ybr = newy;
-        this.journal.mark(this.player.frame, position);
+        this.journal.mark(this.player.frame, this.polltopviewposition());
         this.journal.artificialright = this.journal.rightmost();
     }
 
@@ -1207,6 +1206,34 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         this.notifyupdate();
     }
 
+    this.cleartoendfromframe = function(frame) {
+        this.journal.clearfromframe(frame);
+        this.journal.artificialright = this.journal.rightmost();
+        this.notifyupdate();
+    }
+
+    this.clearbetweenframes = function(frame1, frame2) {
+        this.journal.clearbetweenframes(frame1, frame2);
+        this.journal.artificialright = this.journal.rightmost();
+        this.notifyupdate();
+    }
+
+    this.addannotations = function(annotations) {
+        for (var t in annotations) {
+            this.journal.mark(t, annotations[t]);
+        }
+        this.journal.artificialright = this.journal.rightmost();
+        this.notifyupdate();
+    }
+
+    this.annotationsinrange = function(frame1, frame2) {
+        return this.journal.getannotationsinrange(frame1, frame2);
+    }
+
+    this.annotationstoend = function(frame) {
+        return this.journal.getannotationstoend(frame);
+    }
+
     this.setuptracking = function() {
         this.setlock(true);
         this.notifystarttracking();
@@ -1438,6 +1465,24 @@ function Journal(start, blowradius)
         for (t in clearframes) {
             delete this.annotations[clearframes[t]];
         }
+    }
+
+    this.getannotationsinrange = function(frame1, frame2) {
+        var retframes = []
+        for (t in this.annotations) {
+            var time = parseInt(t);
+            if (time > frame1 && time < frame2) retframes[time] = this.annotations[time];
+        }
+        return retframes;
+    }
+
+    this.getannotationstoend = function(frame) {
+        var retframes = []
+        for (t in this.annotations) {
+            var time = parseInt(t);
+            if (time > frame) retframes[time] = this.annotations[time];
+        }
+        return retframes;
     }
 
     this.bounds = function(frame)

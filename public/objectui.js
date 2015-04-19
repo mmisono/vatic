@@ -9,6 +9,8 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
     this.player = player;
     this.tracks = tracks;
 
+    this.copypastehandler = new CopyPasteHandler();
+
     this.drawer = new BoxDrawer(videoframe);
 
     this.counter = 0;
@@ -41,7 +43,8 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
 
         this.currentobject = new TrackObject(this.job, this.player,
                                              this.container,
-                                             this.currentcolor);
+                                             this.currentcolor,
+                                             this.copypastehandler);
         this.currentobject.statedraw();
 
         this.tracks.resizable(false);
@@ -100,7 +103,8 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
 
         this.currentcolor = this.pickcolor();
         var obj = new TrackObject(this.job, this.player,
-                                  container, this.currentcolor);
+                                  container, this.currentcolor,
+                                  this.copypastehandler);
 
         var track = tracks.add(path[0][4], Position.fromdata(path[0]),
                                this.currentcolor[0], true);
@@ -108,6 +112,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         {
             track.journal.mark(path[i][4], Position.fromdata(path[i]));
         }
+        track.journal.artificialright = track.journal.rightmost();
 
         obj.initialize(this.counter, track, this.tracks);
         obj.finalize(label);
@@ -195,7 +200,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
     }
 }
 
-function TrackObject(job, player, container, color)
+function TrackObject(job, player, container, color, copypastehandler)
 {
     var me = this;
 
@@ -203,6 +208,7 @@ function TrackObject(job, player, container, color)
     this.player = player;
     this.container = container;
     this.color = color;
+    this.copypastehandler = copypastehandler;
 
     this.id = null;
     this.track = null;
@@ -437,7 +443,10 @@ function TrackObject(job, player, container, color)
             "<div class='ui-icon ui-icon-arrow-1-e' id='trackobject" + this.id + "trackforward' title='Track to end'></div>" + 
             "</div>");
         this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
-            "<div class='ui-icon ui-icon-scissors' id='trackobject" + this.id + "clearforward' title='Clear to end'></div>" + 
+            "<div class='ui-icon ui-icon-scissors' id='trackobject" + this.id + "cutend' title='Cut to end'></div>" + 
+            "</div>");
+        this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
+            "<div class='ui-icon ui-icon-clipboard' id='trackobject" + this.id + "paste' title='Paste'></div>" + 
             "</div>");
         this.details.append("<br />");
 
@@ -512,8 +521,11 @@ function TrackObject(job, player, container, color)
         $("#trackobject" + this.id + "trackbackwardstop").click(function() {
             me.track.tracktopreviouskeyframe();
         });
-        $("#trackobject" + this.id + "clearforward").click(function() {
-            me.track.cleartoend();
+        $("#trackobject" + this.id + "cutend").click(function() {
+            me.copypastehandler.cut(me.track, me.player.frame);
+        });
+        $("#trackobject" + this.id + "paste").click(function() {
+            me.copypastehandler.paste(me.track);
         });
 
         this.player.onupdate.push(function() {
@@ -870,5 +882,36 @@ function TrackObject(job, player, container, color)
         {
             list[i](me);
         }
+    }
+}
+
+function CopyPasteHandler()
+{
+    this.annotations = null;
+    this.cut = function(track, frame) {
+        this.annotations = track.annotationstoend(frame);
+        track.cleartoendfromframe(frame);
+    }
+
+    this.paste = function(track) {
+        if (!this.annotations) {
+            alert("Nothing to paste");
+            return;
+        }
+
+        var range = this.framerange();
+        track.clearbetweenframes(range['min'], range['max']);
+        track.addannotations(this.annotations);
+    }
+
+    this.framerange = function() {
+        var minframe = null;
+        var maxframe = null;
+        for (t in this.annotations) {
+            var time = parseInt(t);
+            if (minframe == null || time < minframe) minframe = time;
+            if (maxframe == null || time > maxframe) maxframe = time;
+        }
+        return {'min':minframe, 'max':maxframe};
     }
 }
