@@ -1,4 +1,4 @@
-function PlaneView(handle, player, homography, tracks)
+function PlaneView(handle, player, homography)
 {
     var me = this;
 
@@ -10,14 +10,23 @@ function PlaneView(handle, player, homography, tracks)
     this.homography = homography;
     this.ready = false;
     this.backgroundimg = null;
-    this.tracks = tracks;
+    this.tracks = null;
 
-    this.tracks.onnewobject.push(function(track) {
-            planeview.drawtrajectory(track);
+    this.initializetracks = function(tracks) {
+        this.tracks = tracks;
+        tracks.onnewobject.push(function(track) {
+            me.drawalltrajectories(tracks);
             track.onupdate.push(function() {
-                planeview.drawtrajectory(track);
+                me.clear();
+                me.drawalltrajectories(tracks);
             });
         });
+    }
+
+    this.player.onupdate.push(function() {
+        me.clear();
+        me.drawalltrajectories(me.tracks);
+    });
 
     this.clear = function() {
         var width = this.canvas.width();
@@ -29,23 +38,39 @@ function PlaneView(handle, player, homography, tracks)
         }
     }
 
+    this.drawalltrajectories = function(tracks) {
+        for (var i in tracks.tracks)
+        {
+            this.drawtrajectory(tracks.tracks[i]);
+        }
+    }
+
     this.drawtrajectory = function(track) {
         if (!this.ready) return;
         this.ctx.beginPath();
         this.ctx.strokeStyle = track.color;
-        var pos = track.estimate(player.job.start);
+
+        var curframe = this.player.frame;
+        var start = Math.max(this.player.job.start, curframe - 50);
+        var stop = Math.min(this.player.job.stop, curframe + 50);
+
+        var pos = track.estimate(start);
         var newpos = this.transformposition([pos.xbr, pos.ybr]);
         var newx = newpos[0] / newpos[2];
         var newy = newpos[1] / newpos[2];
+
         this.ctx.moveTo(newx, newy);
-        for (var i = player.job.start; i < player.job.stop; i+=10) {
+
+        for (var i = start; i < stop; i+=1) {
             pos = track.estimate(i);
             if (pos.outside) continue;
+
             newpos = this.transformposition([pos.xbr, pos.ybr]);
             newx = newpos[0] / newpos[2];
             newy = newpos[1] / newpos[2];
             this.ctx.lineTo(newx, newy);
         }
+
         this.ctx.stroke();
     }
 

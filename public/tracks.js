@@ -366,7 +366,6 @@ function TrackCollection(player, topviewplayer, job, autotracker)
      */
     this.update = function(frame)
     {
-        this.topviewplayer.clear();
         for (var i in this.tracks)
         {
             this.tracks[i].draw(frame);
@@ -537,8 +536,8 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             height = 1;
         }
 
-        var xtl = pos.left - offset.left;
-        var ytl = pos.top - offset.top;
+        var xtl = pos.left - offset.left - 5;
+        var ytl = pos.top - offset.top - 5;
         var xbr = xtl + width + this.htmloffset;
         var ybr = ytl + height + this.htmloffset;
 
@@ -794,13 +793,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         this.drawboundingbox(frame, position);
         if (this.topviewplayer) {
             this.drawtopmarker(frame, position);
-            this.drawtrajectory();
         }
-    }
-
-    this.drawtrajectory = function()
-    {
-        //this.topviewplayer.drawtrajectory(this);
     }
 
     this.drawtopmarker = function(frame, position)
@@ -825,7 +818,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
                     //me.triggerinteract();
                 },
                 stop: function() { 
-                    me.fixposition();
+                    //me.fixposition();
                     me.recordtopviewposition();
                     me.notifyupdate();
                     eventlog("draggable", "Drag-n-drop a box");
@@ -1211,6 +1204,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         this.recordposition();
         this.journal.clearfromframe(frame);
         this.journal.artificialright = this.journal.rightmost();
+        this.notifyupdate();
     }
 
     this.setuptracking = function() {
@@ -1231,6 +1225,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     this.cleanuptracking = function() {
         me.setlock(false);
         me.notifydonetracking();
+        me.notifyupdate();
     }
 
     this.tracktopreviouskeyframe = function() {

@@ -61,6 +61,12 @@ code
     padding : 0 5px;
 }
 
+canvas
+{
+    border-style: solid;
+    border-width: 2px;
+}
+
 #turkic_acceptfirst
 {
     background-color : #cd0a0a;

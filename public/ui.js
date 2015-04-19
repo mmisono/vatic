@@ -10,13 +10,13 @@ function ui_build(job)
     if (job.homography) {
         var planeframe = $("#groundplane");
         planeview = new PlaneView(planeframe, player, job.homography);
-    
     }
     var tracks = new TrackCollection(player, planeview, job, autotracker);
     var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
-    tracks.onnewobject.push(function(track) {
-        planeview.drawtrajectory(track);
-    });
+
+    if (planeview) {
+        planeview.initializetracks(tracks);
+    }
 
     ui_setupbuttons(job, player, tracks, autotracker);
     ui_setupslider(player);
