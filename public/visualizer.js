@@ -51,8 +51,8 @@ function PlaneView(handle, player, homography)
         this.ctx.strokeStyle = track.color;
 
         var curframe = this.player.frame;
-        var start = Math.max(this.player.job.start, curframe - 50);
-        var stop = Math.min(this.player.job.stop, curframe + 50);
+        var start = Math.max(this.player.job.start, curframe - 70);
+        var stop = Math.min(this.player.job.stop, curframe + 70);
 
         var pos = track.estimate(start);
         var newpos = this.transformposition([pos.xbr, pos.ybr]);

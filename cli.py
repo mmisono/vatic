@@ -145,6 +145,7 @@ class load(LoadCommand):
         parser.add_argument("--for-training-data", default = None)
         parser.add_argument("--blow-radius", default = 3)
         parser.add_argument("--run-initial-tracking", action="store_true")
+        parser.add_argument("--homography")
         return parser
 
     def title(self, args):
@@ -223,7 +224,10 @@ class load(LoadCommand):
         if not os.path.isdir(homographydir):
             os.makedirs(homographydir)
 
-        np.save(os.path.join(homographydir, "homography.npy"), np.identity(3))
+        if args.homography is not None:
+            shutil.copy(args.homography, os.path.join(homographydir, "homography.npy"))
+        else:
+            np.save(os.path.join(homographydir, "homography.npy"), np.identity(3))
 
         # create video
         video = Video(slug = args.slug,
@@ -673,10 +677,15 @@ class loadtracks(Command):
                         if frame < segment.start or segment.stop <= frame or (frame % video.blowradius != 0):
                             continue
                         newbox = Box(path=newpath)
-                        newbox.xtl = max(boxdata['xtl'], 0)
-                        newbox.ytl = max(boxdata['ytl'], 0)
-                        newbox.xbr = max(boxdata['xbr'], 0)
-                        newbox.ybr = max(boxdata['ybr'], 0)
+                        #newbox.xtl = max(boxdata['xtl'], 0)
+                        #newbox.ytl = max(boxdata['ytl'], 0)
+                        #newbox.xbr = max(boxdata['xbr'], 0)
+                        #newbox.ybr = max(boxdata['ybr'], 0)
+                        newbox.xtl = boxdata['xtl']
+                        newbox.ytl = boxdata['ytl']
+                        newbox.xbr = boxdata['xbr']
+                        newbox.ybr = boxdata['ybr']
+
                         newbox.occluded = boxdata['occluded']
                         newbox.outside = boxdata['outside']
                         newbox.generated = boxdata['generated']
@@ -866,6 +875,36 @@ class dump(DumpCommand):
 
         import pickle
         pickle.dump(annotations, file, protocol = 2)
+
+    def dumptopview(self, file, data, homography):
+        homography = np.load("homographies/")
+        for id, track in enumerate(data):
+            for box in track.boxes:
+                file.write(str(id))
+                file.write(" ")
+                file.write(str(box.xtl))
+                file.write(" ")
+                file.write(str(box.ytl))
+                file.write(" ")
+                file.write(str(box.xbr))
+                file.write(" ")
+                file.write(str(box.ybr))
+                file.write(" ")
+                file.write(str(box.frame))
+                file.write(" ")
+                file.write(str(box.lost))
+                file.write(" ")
+                file.write(str(box.occluded))
+                file.write(" ")
+                file.write(str(box.generated))
+                file.write(" \"")
+                file.write(track.label)
+                file.write("\"")
+                for attr in box.attributes:
+                    file.write(" \"")
+                    file.write(attr.text)
+                    file.write("\"")
+                file.write("\n")
 
     def dumptext(self, file, data):
         for id, track in enumerate(data):
