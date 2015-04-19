@@ -219,6 +219,12 @@ class load(LoadCommand):
         else:
             trainer = None
 
+        homographydir = os.path.abspath(os.path.join("homographies", args.slug))
+        if not os.path.isdir(homographydir):
+            os.makedirs(homographydir)
+
+        np.save(os.path.join(homographydir, "homography.npy"), np.identity(3))
+
         # create video
         video = Video(slug = args.slug,
                       location = os.path.realpath(args.location), 
@@ -230,7 +236,8 @@ class load(LoadCommand):
                       completionbonus = args.completion_bonus,
                       trainwith = trainer,
                       isfortraining = args.for_training,
-                      blowradius = args.blow_radius)
+                      blowradius = args.blow_radius,
+                      homographylocation = homographydir)
 
         if args.for_training:
             video.trainvalidator = qa.tolerable(args.for_training_overlap,
@@ -681,6 +688,7 @@ class loadtracks(Command):
                         newbox.ytl = scalebox.ytl
                         newbox.xbr = scalebox.xbr
                         newbox.ybr = scalebox.ybr
+
                         if not newbox.outside:
                             visible = True
 

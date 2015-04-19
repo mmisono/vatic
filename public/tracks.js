@@ -510,11 +510,63 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     }
 
     /*
+     * Polls the on screen position of the box and returns it.
+     */
+    this.polltopviewposition = function()
+    {
+        var hidden = this.topviewhandle.css("display") == "none";
+        this.topviewhandle.show();
+
+        var pos = this.topviewhandle.position();
+        var width = this.topviewhandle.width();
+        var height = this.topviewhandle.height();
+        var offset = this.topviewplayer.handle.offset();
+
+        if (hidden)
+        {
+            this.topviewhandle.hide();
+        }
+
+        if (width < 1)
+        {
+            width = 1;
+        }
+
+        if (height < 1)
+        {
+            height = 1;
+        }
+
+        var xtl = pos.left - offset.left;
+        var ytl = pos.top - offset.top;
+        var xbr = xtl + width + this.htmloffset;
+        var ybr = ytl + height + this.htmloffset;
+
+        var estimate = this.estimate(this.player.frame);
+        var position = new Position(xtl, ytl, xbr, ybr)
+        position.occluded = estimate.occluded;
+        position.outside = estimate.outside;
+        return position;
+    }
+
+    /*
      * Polls the on screen position and marks it in the journal.
      */
     this.recordposition = function()
     {
         this.journal.mark(this.player.frame, this.pollposition());
+        this.journal.artificialright = this.journal.rightmost();
+    }
+
+    this.recordtopviewposition = function()
+    {
+        var position = this.polltopviewposition();
+        var newpos = this.topviewplayer.invtransformposition([position.xbr, position.ybr]);
+        var newx = newpos[0] / newpos[2];
+        var newy = newpos[1] / newpos[2];
+        position.xbr = newx;
+        position.ybr = newy;
+        this.journal.mark(this.player.frame, position);
         this.journal.artificialright = this.journal.rightmost();
     }
 
@@ -748,7 +800,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
 
     this.drawtrajectory = function()
     {
-        this.topviewplayer.drawtrajectory(this);
+        //this.topviewplayer.drawtrajectory(this);
     }
 
     this.drawtopmarker = function(frame, position)
@@ -774,7 +826,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
                 },
                 stop: function() { 
                     me.fixposition();
-                    me.recordposition();                
+                    me.recordtopviewposition();
                     me.notifyupdate();
                     eventlog("draggable", "Drag-n-drop a box");
                 },

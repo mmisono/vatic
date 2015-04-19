@@ -188,8 +188,6 @@ function Matcher(container, video) {
         var marker = $('<div class="boundingbox"></div>');
         marker.css("border-color", color);
         marker.css("background-color", color);
-        //var fill = $('<div class="fill"></div>').appendTo(marker);
-        //fill.css("background-color", color);
         this.container.append(marker)
 
         var offset = image.offset();
