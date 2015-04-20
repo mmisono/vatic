@@ -29,6 +29,9 @@ function PlaneView(handle, player, homography)
     });
 
     this.clear = function() {
+        if (!this.canvas) {
+            return;
+        }
         var width = this.canvas.width();
         var height = this.canvas.height();
         this.ctx.clearRect(0, 0, width, height);
