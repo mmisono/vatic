@@ -431,6 +431,7 @@ class DumpCommand(Command):
     parent.add_argument("--merge", "-m", action="store_true", default=False)
     parent.add_argument("--merge-threshold", "-t",
                         type=float, default = 0.5)
+    parent.add_argument("--groundplane", action = "store_true", default=False)
     parent.add_argument("--worker", "-w", nargs = "*", default = None)
 
     class Tracklet(object):
@@ -454,7 +455,8 @@ class DumpCommand(Command):
 
         if args.merge:
             for boxes, paths in merge.merge(video.segments, 
-                                            threshold = args.merge_threshold):
+                                            threshold = args.merge_threshold,
+                                            groundplane = args.groundplane):
                 workers = list(set(x.job.workerid for x in paths))
                 tracklet = DumpCommand.Tracklet(paths[0].label.text,
                                                 paths, boxes, workers)
@@ -514,7 +516,21 @@ class visualize(DumpCommand):
             font = ImageFont.truetype("arial.ttf", 14)
         else:
             font = None
-        it = vision.visualize.highlight_paths(video, paths, font = font)
+
+        if args.groundplane:
+            width = max([box.xbr for path in paths for box in path])
+            height = max([box.xbr for path in paths for box in path])
+            class GroundPlane:
+                def __init__(self, width, height):
+                    self.width = width
+                    self.height = height
+
+                def __getitem__(self, index):
+                    return Image.new("RGB", (width, height), "white")
+
+            it = vision.visualize.highlight_paths(GroundPlane(width, height), paths, font = font)
+        else:
+            it = vision.visualize.highlight_paths(video, paths, font = font)
 
         if not args.no_augment:
             it = self.augment(args, video, data, it)
@@ -593,7 +609,7 @@ class loadtracks(Command):
             returndata = json.load(jsonfile)
         return returndata
 
-    def getdatatext(self, filename):
+    def getdatatext(self, filename, maxframe):
         # Input format:
         # id xtl ytl xbr ybr frame lost occluded generated label attributes
         annotations = {}
@@ -616,11 +632,17 @@ class loadtracks(Command):
             annotations[boxid]['boxes'][int(frame)] = boxdict
 
         for boxid, annotation in annotations.iteritems():
+            lastframe = max(annotation['boxes'].keys())
             firstframe = min(annotation['boxes'].keys())
-            newboxdict = annotation['boxes'][firstframe].copy()
-            newboxdict['outside'] = 1
-            for i in range(0, firstframe, 5):
-                annotations[boxid]['boxes'][i] = newboxdict
+            startboxdict = annotation['boxes'][firstframe].copy()
+            startboxdict['outside'] = 1
+            stopboxdict = annotation['boxes'][lastframe].copy()
+            stopboxdict['outside'] = 1
+            for i in range(0, maxframe, 5):
+                if i < firstframe:
+                    annotations[boxid]['boxes'][i] = startboxdict
+                elif i > lastframe:
+                    annotations[boxid]['boxes'][i] = stopboxdict
 
         labelfile.close()
         return annotations
@@ -637,7 +659,7 @@ class loadtracks(Command):
         if args.json:
             data = self.getdatajson(args.labelfile)
         else:
-            data = self.getdatatext(args.labelfile)
+            data = self.getdatatext(args.labelfile, video.totalframes)
 
         scale = args.scale
         if args.dimensions or args.original_video or args.original_frame:

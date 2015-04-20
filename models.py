@@ -202,9 +202,25 @@ class Path(turkic.database.Base):
 
     interpolatecache = None
 
-    def getboxes(self, interpolate = False, bind = False, label = False):
+    def getboxes(self, interpolate = False, bind = False, label = False, groundplane = False):
         result = [x.getbox() for x in self.boxes]
         result.sort(key = lambda x: x.frame)
+
+        if groundplane:
+            homography = None
+            with open(os.path.join(
+                    self.job.segment.video.homographylocation,
+                    "homography.npy"
+                ), "r") as f:
+                homography = np.load(f)
+
+            for i in range(len(result)):
+                t = homography.dot(np.array([result[i].xbr, result[i].ybr, 1]))
+                result[i].xbr = float(t[0]) / t[2]
+                result[i].ybr = float(t[1]) / t[2]
+                result[i].xtl = result[i].xbr - 5
+                result[i].ytl = result[i].ybr - 5
+
         if interpolate:
             if not self.interpolatecache:
                 self.interpolatecache = LinearFill(result)
