@@ -10,7 +10,6 @@ from vision.track.interpolation import Linear
 
 import logging
 
-logging.basicConfig(filename='example.log',level=logging.DEBUG)
 logger = logging.getLogger("vatic.merge")
 
 def getpercentoverlap(groundplane):

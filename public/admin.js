@@ -29,27 +29,52 @@ function buildlist(container, data) {
         var jsonlink = $('<a>',{
             text: "json",
             title: "json",
-            href: "/server/videodump/" + video["slug"] + "/json"
+            href: "/server/videodump/" + video["slug"] + "/json/0"
         });
         var textlink = $('<a>',{
             text: "text",
             title: "text",
-            href: "/server/videodump/" + video["slug"] + "/text"
+            href: "/server/videodump/" + video["slug"] + "/text/0"
         });
         var xmllink = $('<a>',{
             text: "xml",
             title: "xml",
-            href: "/server/videodump/" + video["slug"] + "/xml"
+            href: "/server/videodump/" + video["slug"] + "/xml/0"
         });
 
         titlecell.append("<br />");
-        titlecell.append(" Download tracks: ");
+        titlecell.append(" Bounding box data: ");
         titlecell.append(textlink);
         titlecell.append(", ");
         titlecell.append(jsonlink);
         titlecell.append(", ");
         titlecell.append(xmllink);
         titlecell.append("<br />");
+
+	var gpjsonlink = $('<a>',{
+            text: "json",
+            title: "json",
+            href: "/server/videodump/" + video["slug"] + "/json/1"
+        });
+        var gptextlink = $('<a>',{
+            text: "text",
+            title: "text",
+            href: "/server/videodump/" + video["slug"] + "/text/1"
+        });
+        var gpxmllink = $('<a>',{
+            text: "xml",
+            title: "xml",
+            href: "/server/videodump/" + video["slug"] + "/xml/1"
+        });
+
+        titlecell.append(" Ground plane data: ");
+	titlecell.append(gptextlink);
+        titlecell.append(", ");
+        titlecell.append(gpjsonlink);
+        titlecell.append(", ");
+        titlecell.append(gpxmllink);
+        titlecell.append("<br />");
+
 
         var homographylink = $('<a>',{
             text: "Edit homography",

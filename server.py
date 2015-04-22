@@ -10,6 +10,7 @@ from turkic.server import handler, application
 from turkic.database import session
 import cStringIO
 from models import *
+import dump
 import numpy as np
 import os
 import subprocess
@@ -345,7 +346,8 @@ def savetopview(slug, image, environ):
     cv2.imwrite(savelocation, newimage)
 
 @handler(type="text/plain", jsonify=False)
-def videodump(slug, outputtype):
+def videodump(slug, outputtype, groundplane):
+    logger.debug(os.getcwd())
     query = session.query(Video).filter(Video.slug == slug)
     if query.count() != 1:
         raise ValueError("Invalid video slug")
@@ -354,7 +356,10 @@ def videodump(slug, outputtype):
         dumpcall.append("--json")
     elif outputtype == "xml":
         dumpcall.append("--xml")
-    video = query[0]
+    
+    if int(groundplane) == 1:
+        dumpcall.append("--groundplane")
+
     outfile = tempfile.TemporaryFile()
     subprocess.call(dumpcall, stdout=outfile)
     outfile.seek(0)
