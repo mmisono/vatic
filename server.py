@@ -10,7 +10,7 @@ from turkic.server import handler, application
 from turkic.database import session
 import cStringIO
 from models import *
-import dump
+import dumpcommands
 import numpy as np
 import os
 import subprocess
