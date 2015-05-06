@@ -2,7 +2,33 @@ import shutil
 import os
 import vision.pascal
 import itertools
+import velocity
+import numpy as np
 from xml.etree import ElementTree
+
+# Format:
+# time id x z y vx vz vy labelid
+def dumpforecastdata(file, data):
+    for id, track in enumerate(data):
+        filteredboxes = [box for box in track.boxes if box.frame % 6 == 0]
+        filteredboxes = [box for box in filteredboxes if box.lost == 0]
+        coords = {box.frame: (box.xbr, box.ybr) for box in filteredboxes}
+        velocities = velocity.velocityforcoords(coords)
+        out = np.zeros((len(filteredboxes), 9))
+        for i, box in enumerate(filteredboxes):
+            vx, vy = velocities[box.frame]
+            out[i, :] = np.array([box.frame, id, box.xbr, 0, box.ybr, vx, 0, vy, track.labelid])
+        np.savetxt(file, out, fmt="%.7e")
+
+def dumppositions(file, data):
+    for id, track in enumerate(data):
+        filteredboxes = [box for box in track.boxes if box.lost == 0]
+        out = np.zeros((len(filteredboxes), 4))
+        for i, box in enumerate(filteredboxes):
+            x = float(box.xbr + box.xtl) / 2
+            y = float(box.ybr + box.ytl) / 2
+            out[i, :] = np.array([box.frame, id, x, y])
+        np.savetxt(file, out, fmt="%.7e")
 
 def dumpmatlab(file, data, video, scale):
     results = []

@@ -436,11 +436,12 @@ class DumpCommand(Command):
     parent.add_argument("--worker", "-w", nargs = "*", default = None)
 
     class Tracklet(object):
-        def __init__(self, label, paths, boxes, workers):
+        def __init__(self, label, labelid, paths, boxes, workers):
             self.label = label
             self.paths = paths
             self.boxes = sorted(boxes, key = lambda x: x.frame)
             self.workers = workers
+            self.labelid = labelid
 
         def bind(self):
             for path in self.paths:
@@ -459,7 +460,7 @@ class DumpCommand(Command):
                                             threshold = args.merge_threshold,
                                             groundplane = args.groundplane):
                 workers = list(set(x.job.workerid for x in paths))
-                tracklet = DumpCommand.Tracklet(paths[0].label.text,
+                tracklet = DumpCommand.Tracklet(paths[0].label.text, paths[0].labelid,
                                                 paths, boxes, workers)
                 response.append(tracklet)
         else:
@@ -469,7 +470,7 @@ class DumpCommand(Command):
                         continue
                     worker = job.workerid
                     for path in job.paths:
-                        tracklet = DumpCommand.Tracklet(path.label.text,
+                        tracklet = DumpCommand.Tracklet(path.label.text, path.labelid
                                                         [path],
                                                         path.getboxes(),
                                                         [worker])
@@ -482,7 +483,7 @@ class DumpCommand(Command):
         interpolated = []
         for track in response:
             path = vision.track.interpolation.LinearFill(track.boxes)
-            tracklet = DumpCommand.Tracklet(track.label, track.paths,
+            tracklet = DumpCommand.Tracklet(track.label, track.labelid, track.paths,
                                             path, track.workers)
             interpolated.append(tracklet)
         response = interpolated
@@ -746,6 +747,10 @@ class dump(DumpCommand):
             action="store_true", default=False)
         parser.add_argument("--labelme", "-vlm",
             action="store", default=False)
+        parser.add_argument("--forecast", "-frc",
+            action="store_true", default=False)
+        parser.add_argument("--positions", "-pos",
+            action="store_true", default=False)
         parser.add_argument("--pascal", action="store_true", default=False)
         parser.add_argument("--pascal-difficult", type = int, default = 100)
         parser.add_argument("--pascal-skip", type = int, default = 15)
@@ -805,6 +810,10 @@ class dump(DumpCommand):
                 print "Warning: you should manually update the JPEGImages"
             dumpcommands.dumppascal(file, video, data, args.pascal_difficult,
                             args.pascal_skip, args.pascal_negatives)
+        elif args.forecast:
+            dumpcommands.dumpforecastdata(file, data)
+        elif args.positions:
+            dumpcommands.dumppositions(file, data)
         else:
             dumpcommands.dumptext(file, data, args.groundplane)
 

@@ -282,7 +282,7 @@ function ui_setupbuttons(job, player, tracks, autotracker)
     });
 
     $("#trackingoptionsautotrack").button().click(function() {
-        var autotrack = $(this).attr("checked") ? false : true;
+        var autotrack = $(this).attr("checked") ? true : false;
         tracks.autotrack = autotrack;
 
         if (autotrack)

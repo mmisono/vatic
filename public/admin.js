@@ -51,7 +51,7 @@ function buildlist(container, data) {
         titlecell.append(xmllink);
         titlecell.append("<br />");
 
-	var gpjsonlink = $('<a>',{
+        var gpjsonlink = $('<a>',{
             text: "json",
             title: "json",
             href: "/server/videodump/" + video["slug"] + "/json/1"
@@ -68,7 +68,7 @@ function buildlist(container, data) {
         });
 
         titlecell.append(" Ground plane data: ");
-	titlecell.append(gptextlink);
+        titlecell.append(gptextlink);
         titlecell.append(", ");
         titlecell.append(gpjsonlink);
         titlecell.append(", ");

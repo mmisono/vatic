@@ -456,27 +456,6 @@ canvas
     z-index : 101;
 }
 
-.rowtitle
-{
-    cursor:pointer;
-}
-
-.videolist
-{
-    list-style-type: none;
-}
-
-.videotable
-{
-    width: 800px;
-    border-collapse: collapse;
-    text-align: center;
-}
-
-.videotable th
-{
-    border: 1px solid green; 
-}
 
 .toimagewaiting
 {

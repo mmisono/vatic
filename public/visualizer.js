@@ -97,14 +97,14 @@ function PlaneView(handle, player, homography)
     this.backgroundimg.onload = function() {
         var height = me.backgroundimg.height;
         var width = me.backgroundimg.width;
-        this.drawimage = true;
+        me.drawimage = true;
         me.setupcanvas(width, height);
     }
 
     this.backgroundimg.onerror = function() {
         var height = 240;
         var width = 320;
-        this.drawimage = false;
+        me.drawimage = false;
         me.setupcanvas(width, height);
     }
 

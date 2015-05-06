@@ -262,7 +262,7 @@ function TrackCollection(player, topviewplayer, job, autotracker)
     this.job = job;
     this.tracks = [];
     this.autotracker = autotracker;
-    this.autotrack = true;
+    this.autotrack = false;
 
     this.onnewobject = []; 
 
