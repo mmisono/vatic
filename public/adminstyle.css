@@ -1,0 +1,23 @@
+.videolist
+{
+    list-style-type: none;
+}
+
+.videolist li
+{
+    margin-bottom: 25px
+}
+
+.videotable
+{
+    width: 800px;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+.videotable th
+{
+    border: 1px solid green; 
+}
+
+
