@@ -941,7 +941,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
                 },
                 stop: function() { 
                     me.fixposition();
-                    me.recordposition();                
+                    me.recordposition();
                     me.notifyupdate();
                     eventlog("draggable", "Drag-n-drop a box");
                 },
@@ -1005,7 +1005,11 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             this.handle.removeClass("boundingboxgenerated");
         }
 
+        this.handleposition(position);
+    }
 
+    this.handleposition = function(position)
+    {
         this.handle.css({
             top: position.ytl + this.offset.top + "px",
             left: position.xtl + this.offset.left + "px",
@@ -1044,6 +1048,14 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         }
     }
 
+    this.moveboundingbox = function(position)
+    {
+        this.handleposition(position);
+        this.fixposition();
+        this.recordposition();
+        this.notifyupdate();
+    }
+
     this.resizable = function(value)
     {
         if (this.deleted)
@@ -1061,7 +1073,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         {
             this.handle.resizable("option", "disabled", true);
         }
-    }   
+    }
 
     this.visible = function(value)
     {
