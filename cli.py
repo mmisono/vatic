@@ -731,7 +731,6 @@ class loadtracks(Command):
                 session.add(job)
         session.commit()
 
-
 @handler("Dumps the tracking data")
 class dump(DumpCommand):
     def setup(self):

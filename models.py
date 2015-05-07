@@ -81,6 +81,16 @@ class Video(turkic.database.Base):
                 return np.load(path)
         return None
 
+    def getsegmentneigbors(self, segment):
+        start, stop  = segment.start, segment.stop
+        prevseg, nextseg = None, None
+        for seg in segments:
+            if start <= seg.stop < stop:
+                prevseg = seg
+            elif start < seg.start <= stop:
+                nextseg = seg
+        return prevseg, nextseg
+
 class Label(turkic.database.Base):
     __tablename__ = "labels"
 

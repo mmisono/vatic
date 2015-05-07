@@ -14,6 +14,7 @@ import dumpcommands
 import numpy as np
 import os
 import subprocess
+import merge
 
 import logging
 logger = logging.getLogger("vatic.server")
@@ -134,6 +135,9 @@ def readpaths(tracks):
 @handler(post = "json")
 def savejob(id, tracks):
     job = session.query(Job).get(id)
+    video = job.segment.video
+    prevseg, nextseg = video.getsegmentneighbors(job.segment)
+    boxes, paths = merge.merge([prevseg, video.segment, nextseg])
 
     for path in job.paths:
         session.delete(path)
