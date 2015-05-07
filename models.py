@@ -81,10 +81,10 @@ class Video(turkic.database.Base):
                 return np.load(path)
         return None
 
-    def getsegmentneigbors(self, segment):
+    def getsegmentneighbors(self, segment):
         start, stop  = segment.start, segment.stop
         prevseg, nextseg = None, None
-        for seg in segments:
+        for seg in self.segments:
             if start <= seg.stop < stop:
                 prevseg = seg
             elif start < seg.start <= stop:
@@ -311,6 +311,16 @@ class Box(turkic.database.Base):
     occluded = Column(Boolean, default = False)
     outside = Column(Boolean, default = False)
     generated = Column(Boolean, default = False)
+
+    def frombox(self, box):
+        self.xtl = box.xtl
+        self.xbr = box.xbr
+        self.ytl = box.ytl
+        self.ybr = box.ybr
+        self.frame = box.frame
+        self.occluded = box.occluded
+        self.outside = box.lost
+        self.generated = box.generated
 
     def getbox(self):
         return vision.Box(self.xtl, self.ytl, self.xbr, self.ybr,

@@ -8,6 +8,7 @@ import tracking
 from tracking_helpers import convert_track_to_path
 from turkic.server import handler, application
 from turkic.database import session
+from vision.track.interpolation import LinearFill
 import cStringIO
 from models import *
 import dumpcommands
@@ -135,10 +136,8 @@ def readpaths(tracks):
 @handler(post = "json")
 def savejob(id, tracks):
     job = session.query(Job).get(id)
-    video = job.segment.video
-    prevseg, nextseg = video.getsegmentneighbors(job.segment)
-    boxes, paths = merge.merge([prevseg, video.segment, nextseg])
 
+    # Update current job
     for path in job.paths:
         session.delete(path)
     session.commit()
@@ -146,7 +145,52 @@ def savejob(id, tracks):
     for path in readpaths(tracks):
         logger.info(path)
         job.paths.append(path)
+
     session.add(job)
+    session.commit()
+
+    # Update neigboring segments
+    video = job.segment.video
+    prevseg, nextseg = video.getsegmentneighbors(job.segment)
+
+    mergesegments = [s for s in [prevseg, job.segment, nextseg] if s is not None]
+    updatesegments = [s for s in [prevseg, nextseg] if s is not None]
+
+    merged = merge.merge(mergesegments)
+    labeledboxes = [(paths[0].label, boxes) for boxes, paths in merged]
+
+    # Remove paths in neigboring segments
+    for segment in updatesegments:
+        for path in segment.paths:
+            session.delete(path)
+    session.commit()
+
+    # Add merged paths to neigboring segments
+    for label, boxes in labeledboxes:
+        frames = sorted([box.frame for box in boxes])
+        for segment in updatesegments:
+            for job in segment.jobs:
+                path = Path()
+                path.label = label
+                addedbox = False
+                for box in boxes:
+                    if segment.start <= box.frame <= segment.stop:
+                        newbox = Box(path=path)
+                        newbox.frombox(box)
+                        addedbox = True
+
+                # Some segments and paths might not overlap
+                if addedbox:
+                    # Add in first frame if it's missing
+                    if (frames[0] < segment.start < frames[-1]
+                            and segment.start not in frames):
+                        newbox = Box(path=path)
+                        newbox.frombox([box for box in LinearFill(boxes)
+                            if box.frame == segment.start][0])
+
+                    job.paths.append(path)
+
+                session.add(job)
     session.commit()
 
 @handler(post = "json")
