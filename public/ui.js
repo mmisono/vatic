@@ -3,6 +3,7 @@ var ui_disabled = 0;
 function ui_build(job)
 {
     var screen = ui_setup(job);
+    var shortcut = new ShortcutManager();
     var videoframe = $("#videoframe");
     var player = new VideoPlayer(videoframe, job);
     var autotracker = new AutoTracker(job);
@@ -12,7 +13,7 @@ function ui_build(job)
         planeview = new PlaneView(planeframe, player, job.homography);
     }
     var tracks = new TrackCollection(player, planeview, job, autotracker);
-    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks);
+    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks, shortcut);
 
     if (planeview) {
         planeview.initializetracks(tracks);
@@ -24,7 +25,7 @@ function ui_build(job)
     ui_setupclear(objectui);
     ui_setupfulltrack(objectui, autotracker, job);
     ui_setupclickskip(job, player, tracks, objectui);
-    ui_setupkeyboardshortcuts(job, player);
+    ui_setupkeyboardshortcuts(shortcut, job, player);
     ui_loadprevious(job, objectui);
 
     $("#newobjectbutton").click(function() {
@@ -369,66 +370,43 @@ function ui_setupbuttons(job, player, tracks, autotracker)
     });
 }
 
-function ui_setupkeyboardshortcuts(job, player)
+function ui_setupkeyboardshortcuts(shortcutmanager, job, player)
 {
-    $(window).keypress(function(e) {
-        console.log("Key press: " + e.keyCode);
-
-        if (ui_disabled)
-        {
-            console.log("Key press ignored because UI is disabled.");
-            return;
-        }
-
-        var keycode = e.keyCode ? e.keyCode : e.which;
-        eventlog("keyboard", "Key press: " + keycode);
-        
-        if (keycode == 32 || keycode == 112 || keycode == 116 || keycode == 98)
-        {
-            $("#playbutton").click();
-        }
-        if (keycode == 114)
-        {
-            $("#rewindbutton").click();
-        }
-        else if (keycode == 110)
-        {
-            $("#newobjectbutton").click();
-        }
-        else if (keycode == 104)
-        {
-            $("#annotateoptionshideboxes").click();
-        }
-        else 
-        {
-            var skip = 0;
-            if (keycode == 44 || keycode == 100)
-            {
-                skip = job.skip > 0 ? -job.skip : -10;
-            }
-            else if (keycode == 46 || keycode == 102)
-            {
-                skip = job.skip > 0 ? job.skip : 10;
-            }
-            else if (keycode == 62 || keycode == 118)
-            {
-                skip = job.skip > 0 ? job.skip : 1;
-            }
-            else if (keycode == 60 || keycode == 99)
-            {
-                skip = job.skip > 0 ? -job.skip : -1;
-            }
-
-            if (skip != 0)
-            {
+    function skipcallback(skip) {
+        return function() {
+            if(ui_disabled) return;
+            if (skip != 0) {
                 player.pause();
                 player.displace(skip);
-
                 ui_snaptokeyframe(job, player);
             }
         }
-    });
+    }
 
+    shortcutmanager.addshortcut([32, 84], function() {
+        if(ui_disabled) return;
+        $("#playbutton").click();
+    });
+    shortcutmanager.addshortcut([82], function() {
+        if(ui_disabled) return;
+        $("#rewindbutton").click();
+    });
+    shortcutmanager.addshortcut([78], function() {
+        if(ui_disabled) return;
+        $("#newobjectbutton").click();
+    });
+    shortcutmanager.addshortcut([69], function() {
+        if(ui_disabled) return;
+        $("#annotateoptionshideboxes").click();
+    });
+    shortcutmanager.addshortcut([68],
+        skipcallback(job.skip > 0 ? -job.skip : -10));
+    shortcutmanager.addshortcut([70],
+        skipcallback(job.skip > 0 ? job.skip : 10));
+    shortcutmanager.addshortcut([86],
+        skipcallback(job.skip > 0 ? job.skip : 1));
+    shortcutmanager.addshortcut([67],
+        skipcallback(job.skip > 0 ? -job.skip : -1));
 }
 
 function ui_canresize()

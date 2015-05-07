@@ -1,4 +1,92 @@
-function TrackObjectUI(button, container, videoframe, job, player, tracks)
+function TrackEditor(shortcuts)
+{
+    var me = this;
+
+    this.shortcuts = shortcuts;
+    this.track = null;
+
+    this.settrack = function(track) {
+        this.track = track;
+    }
+
+    this.initializeshortucts = function() {
+        // U decrease width
+        this.shortcuts.addshortcut([85], function() {
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.xbr -= 1;
+            pos.width -= 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // I increase width
+        this.shortcuts.addshortcut([73], function() {
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.xbr += 1;
+            pos.width += 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // O decrease height
+        this.shortcuts.addshortcut([79], function() {
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.ybr -= 1;
+            pos.height -= 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // P decrease height
+        this.shortcuts.addshortcut([80], function() {
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.ybr += 1;
+            pos.height += 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // Left arrow and H
+        this.shortcuts.addshortcut([37, 72], function(){
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.xtl -= 1;
+            pos.xbr -= 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // Up arrow and K
+        this.shortcuts.addshortcut([38, 75], function(){
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.ytl -= 1;
+            pos.ybr -= 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // Right arrow and L
+        this.shortcuts.addshortcut([39, 76], function(){
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.xtl += 1;
+            pos.xbr += 1;
+            me.track.moveboundingbox(pos);
+        });
+
+        // Down arrow and J
+        this.shortcuts.addshortcut([40, 74], function(){
+            if (!me.track) return;
+            var pos = me.track.pollposition();
+            pos.ytl += 1;
+            pos.ybr += 1;
+            me.track.moveboundingbox(pos);
+        });
+    }
+
+    this.initializeshortucts();
+}
+
+function TrackObjectUI(button, container, videoframe, job, player, tracks, shortcuts)
 {
     var me = this;
 
@@ -8,8 +96,10 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
     this.job = job;
     this.player = player;
     this.tracks = tracks;
+    this.shortcuts = shortcuts;
 
     this.copypastehandler = new CopyPasteHandler();
+    this.trackeditor = new TrackEditor(this.shortcuts);
 
     this.drawer = new BoxDrawer(videoframe);
 
@@ -19,6 +109,37 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
     this.currentcolor = null;
 
     this.objects = [];
+
+    this.selectedobject = null;
+
+    this.deselectcurrentobject = function()
+    {
+        this.selectedobject = null;
+        for (var i in this.objects) {
+            this.objects[i].resetselected();
+        }
+    }
+
+    this.selectobject = function(object)
+    {
+        this.selectedobject = object;
+        this.trackeditor.settrack(this.selectedobject.track);
+        for (var i in this.objects) {
+            this.objects[i].deactivate();
+        }
+        this.selectedobject.select();
+    }
+
+    this.setupnewobject = function(object)
+    {
+        object.onclick.push(function() {
+            if (me.selectedobject == object) {
+                me.deselectcurrentobject();
+            } else {
+                me.selectobject(object);
+            }
+        });
+    }
 
     this.startnewobject = function()
     {
@@ -76,6 +197,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         tracks.drawingnew(false);
 
         this.objects.push(this.currentobject);
+        this.setupnewobject(this.currentobject);
 
         this.tracks.draggable(true);
         if ($("#annotateoptionsresize:checked").size() == 0)
@@ -127,6 +249,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks)
         obj.updatecheckboxes();
         obj.updateboxtext();
         this.objects.push(obj);
+        this.setupnewobject(obj);
         this.counter++;
 
         return obj;
@@ -218,6 +341,7 @@ function TrackObject(job, player, container, color, copypastehandler)
     this.onready = [];
     this.onfolddown = [];
     this.onfoldup = [];
+    this.onclick = [];
 
     this.handle = $("<div class='trackobject'><div>");
     this.handle.prependTo(container);
@@ -243,6 +367,9 @@ function TrackObject(job, player, container, color, copypastehandler)
 
     this.tooltip = null;
     this.tooltiptimer = null;
+
+    this.selected = false;
+    this.inactive = false;
 
     this.initialize = function(id, track, tracks)
     {
@@ -279,6 +406,7 @@ function TrackObject(job, player, container, color, copypastehandler)
         })
 
         this.track.oninteract.push(function() {
+            me.click();
             var pos = me.handle.position().top + me.container.scrollTop() - 30;
             pos = pos - me.handle.height();
             me.container.stop().animate({scrollTop: pos}, 750);
@@ -813,6 +941,7 @@ function TrackObject(job, player, container, color, copypastehandler)
 
     this.mouseover = function()
     {
+        if (this.selected || this.inactive) return;
         this.highlight();
 
         if (this.track)
@@ -828,6 +957,32 @@ function TrackObject(job, player, container, color, copypastehandler)
         }
     }
 
+    this.deactivate = function()
+    {
+        this.selected = false;
+        this.inactive = true;
+
+        this.handle.css({
+            'background-color': me.color[1],
+        });
+    }
+
+    this.resetselected = function()
+    {
+        this.selected = false;
+        this.inactive = false;
+
+        this.unhighlight();
+    }
+
+    this.select = function()
+    {
+        this.selected = true;
+        this.handle.css({
+            'background-color': me.color[0],
+        });
+    }
+
     this.highlight = function()
     {
         this.handle.css({
@@ -838,6 +993,7 @@ function TrackObject(job, player, container, color, copypastehandler)
 
     this.mouseout = function()
     {
+        if (this.selected || this.inactive) return;
         this.unhighlight();
 
         if (this.track)
@@ -862,17 +1018,9 @@ function TrackObject(job, player, container, color, copypastehandler)
 
     this.click = function()
     {
-        return; // disable fold down
         if (this.ready)
         {
-            if (this.foldedup)
-            {
-                this.statefolddown();
-            }
-            else
-            {
-                this.statefoldup();
-            }
+            this._callback(this.onclick);
         }
     }
 
