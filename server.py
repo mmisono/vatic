@@ -52,12 +52,6 @@ def getjob(id, verified):
     if homography is not None:
         homography = homography.tolist()
 
-    trackers = {
-        "forward": tracking.getforwardtrackers(),
-        "bidirectional": tracking.getbidirectionaltrackers(),
-        "full": tracking.getfulltrackers(),
-    }
-
     return {
         "start":        segment.start,
         "stop":         segment.stop,
@@ -73,7 +67,7 @@ def getjob(id, verified):
         "labels":       labels,
         "attributes":   attributes,
         "homography":   homography,
-        "trackers":     trackers,
+        "trackers":     tracking.api.gettrackers(),
     }
 
 @handler()
@@ -83,6 +77,7 @@ def getboxesforjob(id):
     for path in job.paths:
         attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
         result.append({"label": path.labelid,
+                       "userid": path.userid,
                        "boxes": [tuple(x) for x in path.getboxes()],
                        "attributes": attrs})
     return result
@@ -214,13 +209,14 @@ def respawnjob(id):
     session.add(replacement)
     session.commit()
 
-
+""" TRACKING """
 @handler(post = "json")
-def trackforward(id, frame, tracker, label, position):
+def trackforward(id, frame, tracker, position, tracks):
     frame = int(frame)
     job = session.query(Job).get(id)
     segment = job.segment
     video = segment.video
+    paths = readpaths(tracks)
     xtl, ytl, xbr, ybr, occluded, outside, generated = position
     labelquery = session.query(Label).get(label)
     labeltext = ""
