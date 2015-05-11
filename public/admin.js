@@ -4,6 +4,7 @@ $(document).ready(function() {
 
 var MAX_WIDTH = 400
 var MAX_HEIGHT = 600
+var exporttypes = ["json", "xml", "text"]
 
 function boot()
 {
@@ -12,6 +13,52 @@ function boot()
     });
 }
 
+function getdownloadurl(video) {
+    var slug = video["slug"];
+    var type = $("#exportvideotype" + slug).val();
+    var gp = $("#exportvideogp" + slug).attr("checked") ? 1 : 0;
+    var fields = $("#exportvideofields" + slug).val();
+    return "/server/videodump/" + video["slug"] + "/" + type + "/" + gp + "/" + fields;
+}
+
+function setupexportpane(video, container) {
+    var exporttype = $("<select>").appendTo(container).attr("id", "exportvideotype"+video["slug"]);
+    var link = $('<a>',{
+        text: "download",
+        title: "download",
+        href: ""
+    });
+
+    for (var i in exporttypes) {
+        $("<option>").appendTo(exporttype).attr("value",exporttypes[i]).text(exporttypes[i]);
+    }
+    exporttype.change(function() {
+        link.attr("href", getdownloadurl(video));
+    });
+
+    var exportgroundplane = $("<input type='checkbox' />")
+        .appendTo(container)
+        .attr("id", "exportvideogp"+video["slug"]);
+
+    $("<label>").appendTo(container)
+        .attr("for", "exportvideogp"+video["slug"])
+        .text("Ground plane");
+ 
+    exportgroundplane.button().click(function() {
+        link.attr("href", getdownloadurl(video));
+    });
+
+    var exportfields = $("<input type='text' />")
+        .appendTo(container)
+        .attr("id", "exportvideofields" + video["slug"]);
+
+    exportfields.change(function() {
+        link.attr("href", getdownloadurl(video));
+    });
+
+    link.appendTo(container);
+    container.append("<br />");
+}
 
 function buildlist(container, data) {
     var videoslist = $("<ul />").appendTo(container).addClass("videolist");
@@ -26,55 +73,12 @@ function buildlist(container, data) {
         var titlecell = $("<th />").appendTo(titlerow).attr("colspan", 5);
         titlecell.append(rowtitle);
 
-        var jsonlink = $('<a>',{
-            text: "json",
-            title: "json",
-            href: "/server/videodump/" + video["slug"] + "/json/0"
-        });
-        var textlink = $('<a>',{
-            text: "text",
-            title: "text",
-            href: "/server/videodump/" + video["slug"] + "/text/0"
-        });
-        var xmllink = $('<a>',{
-            text: "xml",
-            title: "xml",
-            href: "/server/videodump/" + video["slug"] + "/xml/0"
-        });
+        titlecell.append("<br />");
+        var exportpane = $("<div id='videoexport" + video["slug"] + "' class='videoexport'>")
+            .appendTo(titlecell);
+        setupexportpane(video, exportpane);
 
         titlecell.append("<br />");
-        titlecell.append(" Bounding box data: ");
-        titlecell.append(textlink);
-        titlecell.append(", ");
-        titlecell.append(jsonlink);
-        titlecell.append(", ");
-        titlecell.append(xmllink);
-        titlecell.append("<br />");
-
-        var gpjsonlink = $('<a>',{
-            text: "json",
-            title: "json",
-            href: "/server/videodump/" + video["slug"] + "/json/1"
-        });
-        var gptextlink = $('<a>',{
-            text: "text",
-            title: "text",
-            href: "/server/videodump/" + video["slug"] + "/text/1"
-        });
-        var gpxmllink = $('<a>',{
-            text: "xml",
-            title: "xml",
-            href: "/server/videodump/" + video["slug"] + "/xml/1"
-        });
-
-        titlecell.append(" Ground plane data: ");
-        titlecell.append(gptextlink);
-        titlecell.append(", ");
-        titlecell.append(gpjsonlink);
-        titlecell.append(", ");
-        titlecell.append(gpxmllink);
-        titlecell.append("<br />");
-
 
         var homographylink = $('<a>',{
             text: "Edit homography",
