@@ -1,12 +1,34 @@
-function TrackEditor(shortcuts)
+function TrackEditor(shortcuts, videoframe)
 {
     var me = this;
 
     this.shortcuts = shortcuts;
+    this.videoframe = videoframe;
     this.track = null;
+    this.enabled = false;
+
+    this.enable = function() {
+        this.enabled = true;
+    }
+
+    this.disable = function() {
+        this.enabled = false;
+    }
 
     this.settrack = function(track) {
         this.track = track;
+        this.videoframe.click(function(e) {
+            if (!me.enabled) return;
+            var offset = me.videoframe.offset();
+            var x = e.pageX - offset.left;
+            var y = e.pageY - offset.top;
+            var pos = me.track.pollposition();
+            pos.xbr = x + (0.5 * pos.width);
+            pos.ybr = y + (0.5 * pos.height);
+            pos.xtl = x - (0.5 * pos.width);
+            pos.ytl = y - (0.5 * pos.height);
+            me.track.moveboundingbox(pos);
+        });
     }
 
     this.initializeshortucts = function() {
@@ -99,11 +121,12 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
     this.shortcuts = shortcuts;
 
     this.copypastehandler = new CopyPasteHandler();
-    this.trackeditor = new TrackEditor(this.shortcuts);
+    this.trackeditor = new TrackEditor(this.shortcuts, this.videoframe);
 
     this.drawer = new BoxDrawer(videoframe);
 
     this.counter = 0;
+    this.idcounter = job.nextid;
 
     this.currentobject = null;
     this.currentcolor = null;
@@ -115,6 +138,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
     this.deselectcurrentobject = function()
     {
         this.selectedobject = null;
+        this.trackeditor.disable();
         for (var i in this.objects) {
             this.objects[i].resetselected();
         }
@@ -124,6 +148,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
     {
         this.selectedobject = object;
         this.trackeditor.settrack(this.selectedobject.track);
+        this.trackeditor.enable();
         for (var i in this.objects) {
             this.objects[i].deactivate();
         }
@@ -148,6 +173,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
             return;
         }
 
+        this.deselectcurrentobject();
         tracks.drawingnew(true);
 
         console.log("Starting new track object");
@@ -185,7 +211,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
             me.stopnewobject();
         });
         
-        this.currentobject.initialize(this.counter, track, this.tracks);
+        this.currentobject.initialize(this.counter, track, this.tracks, this.idcounter);
         this.currentobject.stateclassify();
     }
 
@@ -215,9 +241,10 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         this.button.button("option", "disabled", false);
 
         this.counter++;
+        this.idcounter++;
     }
 
-    this.injectnewobject = function(label, path, attributes)
+    this.injectnewobject = function(label, userid, path, attributes)
     {
         console.log("Injecting existing object");
 
@@ -236,7 +263,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         }
         track.journal.artificialright = track.journal.rightmost();
 
-        obj.initialize(this.counter, track, this.tracks);
+        obj.initialize(this.counter, track, this.tracks, userid);
         obj.finalize(label);
 
         for (var i = 0; i < attributes.length; i++)
@@ -337,6 +364,7 @@ function TrackObject(job, player, container, color, copypastehandler)
     this.track = null;
     this.tracks = null;
     this.label = null;
+    this.userid = null;
 
     this.onready = [];
     this.onfolddown = [];
@@ -371,9 +399,10 @@ function TrackObject(job, player, container, color, copypastehandler)
     this.selected = false;
     this.inactive = false;
 
-    this.initialize = function(id, track, tracks)
+    this.initialize = function(id, track, tracks, userid)
     {
         this.id = id;
+        this.userid = userid;
         this.track = track;
         this.tracks = tracks;
 
@@ -500,6 +529,17 @@ function TrackObject(job, player, container, color, copypastehandler)
             });
         }
     }
+
+    this.setupuserid = function() {
+        me.track.userid = me.userid;
+
+        var textbox = $("#trackuserid"+this.id);
+        textbox.val(this.userid);
+        textbox.on('input propertychange paste', function() {
+            me.userid = textbox.val();
+            me.track.userid = me.userid;
+        });
+    }
     
     this.finalize = function(labelid)
     {
@@ -509,8 +549,11 @@ function TrackObject(job, player, container, color, copypastehandler)
         this.headerdetails = $("<div style='float:right;'></div>").appendTo(this.handle);
         this.header = $("<p class='trackobjectheader'><strong>" + this.job.labels[this.label] + " " + (this.id + 1) + "</strong></p>").appendTo(this.handle).hide().slideDown();
         //this.opencloseicon = $('<div class="ui-icon ui-icon-triangle-1-e"></div>').prependTo(this.header);
+        this.useridtext = $("<div><label for='trackuserid" + this.id + "'>Id: </label><input type=text id='trackuserid" + this.id + "' size=5 /></div>").appendTo(this.handle).hide().slideDown();
+
         this.details = $("<div class='trackobjectdetails'></div>").appendTo(this.handle).hide();
 
+        this.setupuserid();
         this.setupdetails();
 
         this.updateboxtext();

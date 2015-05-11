@@ -432,6 +432,7 @@ class DumpCommand(Command):
     parent.add_argument("--merge", "-m", action="store_true", default=False)
     parent.add_argument("--merge-threshold", "-t",
                         type=float, default = 0.5)
+    parent.add_argument("--merge-method", default = "overlap", choices=["overlap", "id"])
     parent.add_argument("--groundplane", action = "store_true", default=False)
     parent.add_argument("--worker", "-w", nargs = "*", default = None)
 
@@ -456,7 +457,12 @@ class DumpCommand(Command):
         video = video.one()
 
         if args.merge:
+            mergemethod = merge.getpercentoverlap(args.groundplane)
+            if args.merge_method == "overlap":
+                mergemethod = merge.userid
+
             for boxes, paths in merge.merge(video.segments, 
+                                            method=mergemethod,
                                             threshold = args.merge_threshold,
                                             groundplane = args.groundplane):
                 workers = list(set(x.job.workerid for x in paths))

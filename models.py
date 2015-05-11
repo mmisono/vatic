@@ -81,6 +81,12 @@ class Video(turkic.database.Base):
                 return np.load(path)
         return None
 
+    def nextid(self):
+        userids = [path.userid for segment in self.segments for path in segment.paths]
+        if len(userids) == 0:
+            return 0
+        return max(userids) + 1
+
     def getsegmentneighbors(self, segment):
         start, stop  = segment.start, segment.stop
         prevseg, nextseg = None, None

@@ -68,6 +68,7 @@ def getjob(id, verified):
         "attributes":   attributes,
         "homography":   homography,
         "trackers":     tracking.api.gettrackers(),
+        "nextid":       video.nextid(),
     }
 
 @handler()
@@ -82,9 +83,10 @@ def getboxesforjob(id):
                        "attributes": attrs})
     return result
 
-def readpath(label, track, attributes):
+def readpath(label, userid, track, attributes):
     path = Path()
     path.label = session.query(Label).get(label)
+    path.userid = int(userid)
  
     logger.debug("Received a {0} track".format(path.label.text))
 
@@ -126,7 +128,7 @@ def readpath(label, track, attributes):
 def readpaths(tracks):
     paths = []
     logger.debug("Reading {0} total tracks".format(len(tracks)))
-    return [readpath(label, track, attributes) for label, track, attributes in tracks]
+    return [readpath(label, userid, track, attributes) for label, userid, track, attributes in tracks]
 
 @handler(post = "json")
 def savejob(id, tracks):
@@ -151,8 +153,15 @@ def savejob(id, tracks):
     mergesegments = [s for s in [prevseg, job.segment, nextseg] if s is not None]
     updatesegments = [s for s in [prevseg, nextseg] if s is not None]
 
-    merged = merge.merge(mergesegments)
-    labeledboxes = [(paths[0].label, boxes) for boxes, paths in merged]
+    # Create list of merged boxes with given label and userid
+    labeledboxes = []
+    for boxes, paths in merge.merge(mergesegments):
+        path = paths[0]
+        for p in paths:
+            if p.job.segmentid == job.segmentid:
+                path = p
+                break
+        labeledboxes.append((path.label, path.userid, boxes))
 
     # Remove paths in neigboring segments
     for segment in updatesegments:
@@ -161,18 +170,20 @@ def savejob(id, tracks):
     session.commit()
 
     # Add merged paths to neigboring segments
-    for label, boxes in labeledboxes:
+    for label, userid, boxes in labeledboxes:
         frames = sorted([box.frame for box in boxes])
         for segment in updatesegments:
             for job in segment.jobs:
                 path = Path()
                 path.label = label
+                path.userid = userid
                 addedbox = False
                 for box in boxes:
                     if segment.start <= box.frame <= segment.stop:
                         newbox = Box(path=path)
                         newbox.frombox(box)
-                        addedbox = True
+                        if not box.lost:
+                            addedbox = True
 
                 # Some segments and paths might not overlap
                 if addedbox:

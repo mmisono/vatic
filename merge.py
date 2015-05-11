@@ -12,6 +12,11 @@ import logging
 
 logger = logging.getLogger("vatic.merge")
 
+def userid(first, second):
+    if first.userid == second.userid:
+        return 1
+    return 0
+
 def getpercentoverlap(groundplane):
     def percentoverlap(first, second):
         """
@@ -117,8 +122,15 @@ def mergepath(left, right):
 
     rightmin = min(x.frame for x in right)
 
-    boundary = (max((x.frame, x) for x in left if x.frame < rightmin),
-                min((x.frame, x) for x in left if x.frame >= rightmin))
+    leftboundary = [(x.frame, x) for x in left if x.frame < rightmin]
+    rightboundary = [(x.frame, x) for x in left if x.frame >= rightmin]
+
+    if len(leftboundary) == 0:
+        return right
+    if len(rightboundary) == 0:
+        boundary = (max(leftboundary), (rightmin, right[0]))
+    else:
+        boundary = (max(leftboundary), min(rightboundary))
 
     leftfill = Linear(boundary[0][1], boundary[1][1])
     pivot    = [x for x in leftfill if x.frame == rightmin][0]

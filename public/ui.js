@@ -112,11 +112,11 @@ function ui_setup(job)
     $("<label>").appendTo("#trackingoptions").attr("for", "forwardtrackingselect").text("Forward: ");
     $("<select>").appendTo("#trackingoptions").attr("id", "forwardtrackingselect");
     $("<option>").appendTo("#forwardtrackingselect").attr("value", "none").text("None");
-    for (var i in job.forwardtrackers) {
-        $("<option>").appendTo("#forwardtrackingselect").attr("value", job.forwardtrackers[i]).text(job.forwardtrackers[i]);
+    for (var i in job.onlinetrackers) {
+        $("<option>").appendTo("#forwardtrackingselect").attr("value", job.onlinetrackers[i]).text(job.onlinetrackers[i]);
     }
-    if (job.forwardtrackers.length > 0) {
-        $("#forwardtrackingselect").val(job.forwardtrackers[0]);
+    if (job.onlinetrackers.length > 0) {
+        $("#forwardtrackingselect").val(job.onlinetrackers[0]);
     }
 
     $("<label>").appendTo("#trackingoptions").attr("for", "bidirectionaltrackingselect").text("Bidirectional: ");
@@ -519,6 +519,7 @@ function ui_loadprevious(job, objectui)
         for (var i in data)
         {
             objectui.injectnewobject(data[i]["label"],
+                                     data[i]["userid"],
                                      data[i]["boxes"],
                                      data[i]["attributes"]);
         }
@@ -563,8 +564,8 @@ function ui_setupfulltrack(objectui, autotracker, job)
     fulltrackingselected();
     $("#fulltrackingselect").change(fulltrackingselected);
 
-    for (var i in job.fulltrackers) {
-        $("<option>").appendTo("#fulltrackingselect").attr("value", job.fulltrackers[i]).text(job.fulltrackers[i]);
+    for (var i in job.multiobjecttrackers) {
+        $("<option>").appendTo("#fulltrackingselect").attr("value", job.multiobjecttrackers[i]).text(job.fulltrackers[i]);
     }
 
     $("#fulltrackingbutton").button({
@@ -578,6 +579,7 @@ function ui_setupfulltrack(objectui, autotracker, job)
             for (var i in data)
             {
                 objectui.injectnewobject(data[i]["label"],
+                                         data[i]["userid"],
                                          data[i]["boxes"],
                                          data[i]["attributes"]);
             }
@@ -585,8 +587,6 @@ function ui_setupfulltrack(objectui, autotracker, job)
         });
     });
 }
-
-
 
 function ui_submit(job, tracks)
 {
