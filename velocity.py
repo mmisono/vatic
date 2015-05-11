@@ -1,15 +1,20 @@
-# coords is t -> (x, y)
+
 # return is t -> (vx, vy)
-def velocityforcoords(coords):
-    if len(coords) == 0:
-        return {}
-    times = sorted(coords.keys())
+def velocityforboxes(boxes):
+    frametobox = {box.frame: box for box in boxes} 
+    times = sorted(frametobox.keys())
     vels = {}
-    for last, curr in zip(times, times[1:]):
-        delta = curr - last
-        velx = float(coords[curr][0] - coords[last][0]) / float(delta)
-        vely = float(coords[curr][1] - coords[last][1]) / float(delta)
-        vels[last] = (velx, vely)
-    vels[times[-1]] = (velx, vely)
+    for i, time in enumerate(times):
+        last = times[max(0, i - 3)]
+        nxt = times[min(len(times)-1, i + 3)]
+        delta = nxt - last
+        if frametobox[time].lost == 0 or delta == 0:
+            velx = 0
+            vely = 0
+        else:
+
+            velx = float(frametobox[nxt].xbr - frametobox[last].xbr) / float(delta)
+            vely = float(frametobox[nxt].ybr - frametobox[last].ybr) / float(delta)
+        vels[time] = (velx, vely)
     return vels
-    
+ 

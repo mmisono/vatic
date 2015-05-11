@@ -11,7 +11,7 @@ from turkic.database import session
 from vision.track.interpolation import LinearFill
 import cStringIO
 from models import *
-import dumpcommands
+import dumptools
 import numpy as np
 import os
 import subprocess
@@ -21,6 +21,7 @@ import logging
 logger = logging.getLogger("vatic.server")
 
 HOMOGRAPHY_DIR = "homographies"
+
 
 @handler()
 def getjob(id, verified):
@@ -220,6 +221,7 @@ def respawnjob(id):
     session.add(replacement)
     session.commit()
 
+
 """ TRACKING """
 @handler(post = "json")
 def trackforward(id, frame, tracker, position, tracks):
@@ -292,6 +294,7 @@ def trackbetweenframes(id, leftframe, rightframe, tracker, label, pos):
         "attributes": attrs
     }
 
+
 """ ADMIN PAGE """
 @handler()
 def getallvideos():
@@ -319,6 +322,39 @@ def getallvideos():
 
         videos.append(newvideo)
     return videos
+
+@handler(type="text/plain", jsonify=False)
+def videodump(slug, outputtype, groundplane, fields=None):
+    logger.debug(os.getcwd())
+    query = session.query(Video).filter(Video.slug == slug)
+    if query.count() != 1:
+        raise ValueError("Invalid video slug")
+    video = query.one()
+
+    #mergemethod = merge.userid
+    groundplane = (groundplane == 1)
+    mergemethod = merge.getpercentoverlap(groundplane)
+    if fields is None:
+        if groundplane:
+            fields = dumptools.GROUND_PLANE_FORMAT
+        else:
+            fields = dumptools.DEFAULT_FORMAT
+    fields = fields.split()
+
+    data = dumptools.getdata(video, True, mergemethod, 0.5, None, groundplane)
+
+    outfile = tempfile.TemporaryFile()
+    if outputtype == "json":
+        dumptools.dumpjson(outfile, data, groundplane, fields)
+    elif outputtype == "xml":
+        dumptools.dumpjson(outfile, data, groundplane, fields)
+    else:
+        dumptools.dumptext(outfile, data, groundplane, fields)
+
+    outfile.seek(0)
+    text = outfile.readlines()
+    outfile.close()
+    return text
 
 
 """ HOMOGRAPHY PAGE """
@@ -399,27 +435,4 @@ def savetopview(slug, image, environ):
         newimage = cv2.resize(newimage, (0, 0), None, scale, scale)
 
     cv2.imwrite(savelocation, newimage)
-
-@handler(type="text/plain", jsonify=False)
-def videodump(slug, outputtype, groundplane):
-    logger.debug(os.getcwd())
-    query = session.query(Video).filter(Video.slug == slug)
-    if query.count() != 1:
-        raise ValueError("Invalid video slug")
-    dumpcall = ["turkic", "dump", slug, "--merge"]
-    if outputtype == "json":
-        dumpcall.append("--json")
-    elif outputtype == "xml":
-        dumpcall.append("--xml")
-    
-    if int(groundplane) == 1:
-        dumpcall.append("--groundplane")
-
-    outfile = tempfile.TemporaryFile()
-    subprocess.call(dumpcall, stdout=outfile)
-    outfile.seek(0)
-    text = outfile.readlines()
-    outfile.close()
-    return text
-
 

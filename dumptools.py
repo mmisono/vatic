@@ -4,16 +4,117 @@ import vision.pascal
 import itertools
 import velocity
 import numpy as np
+import merge
 from xml.etree import ElementTree
+from models import Path
+
+"""
+This module dumps data as the desired file type.
+"""
+
+DEFAULT_FORMAT = "id xtl ytl xbr ybr frame lost occluded generated label attributes"
+GROUND_PLANE_FORMAT = "id x y frame lost occluded generated label attributes"
+
+class Tracklet(object):
+    def __init__(self, label, labelid, userid, paths, boxes, workers, velocities):
+        self.label = label
+        self.paths = paths
+        self.boxes = sorted(boxes, key = lambda x: x.frame)
+        self.velocities = velocities
+        self.workers = workers
+        self.labelid = labelid
+        self.userid = userid
+
+    def bind(self):
+        for path in self.paths:
+            self.boxes = Path.bindattributes(path.attributes, self.boxes)
+
+def getdata(video, domerge=True, mergemethod=None, mergethreshold=0.5,
+        workers=None, groundplane=False):
+
+    response = []
+    if domerge:
+        for boxes, paths in merge.merge(video.segments, 
+                                        method=mergemethod,
+                                        threshold = mergethreshold,
+                                        groundplane = groundplane):
+            trackworkers = list(set(x.job.workerid for x in paths))
+            tracklet = Tracklet(
+                paths[0].label.text,
+                paths[0].labelid,
+                paths[0].userid,
+                paths,
+                boxes,
+                trackworkers,
+                {}
+            )
+            response.append(tracklet)
+    else:
+        for segment in video.segments:
+            for job in segment.jobs:
+                if not job.useful:
+                    continue
+                worker = job.workerid
+                for path in job.paths:
+                    tracklet = Tracklet(
+                        path.label.text,
+                        path.labelid,
+                        path.userid, 
+                        [path],
+                        path.getboxes(),
+                        [worker],
+                        {}
+                    )
+                    response.append(tracklet)
+
+    if workers:
+        response = [x for x in response if set(x.workers) & workers]
+
+    interpolated = []
+    for track in response:
+        path = vision.track.interpolation.LinearFill(track.boxes)
+        velocities = velocity.velocityforboxes(path)
+        tracklet = Tracklet(track.label, track.labelid, track.userid,
+                                        track.paths, path, track.workers, velocities)
+        interpolated.append(tracklet)
+    response = interpolated
+
+    for tracklet in response:
+        tracklet.bind()
+
+    return response
+
+def trackletdataforfield(tracklet, id, field):
+    if field == "id":
+        return id
+    elif field == "userid":
+        return tracklet.userid
+    elif field == "label":
+        return tracklet.label
+    elif field == "labelid":
+        return tracklet.labelid
+    return None
+
+# Get data for a given format string
+# Will return either a string or a list in the case of box attributes
+def boxdataforfield(box, velocity, field):
+    try:
+        return getattr(box, field)
+    except AttributeError:
+        if field == "x":
+            return box.xbr
+        elif field == "y":
+            return box.ybr
+        elif field == "vx":
+            return velocity[0]
+        elif field == "vy":
+            return velocity[1]
+        return None
 
 # Format:
 # time id x z y vx vz vy labelid
 def dumpforecastdata(file, data):
     for id, track in enumerate(data):
-        filteredboxes = [box for box in track.boxes if box.frame % 6 == 0]
-        filteredboxes = [box for box in filteredboxes if box.lost == 0]
-        coords = {box.frame: (box.xbr, box.ybr) for box in filteredboxes}
-        velocities = velocity.velocityforcoords(coords)
         out = np.zeros((len(filteredboxes), 9))
         for i, box in enumerate(filteredboxes):
             vx, vy = velocities[box.frame]
@@ -30,23 +131,19 @@ def dumppositions(file, data):
             out[i, :] = np.array([box.frame, id, x, y])
         np.savetxt(file, out, fmt="%.7e")
 
-def dumpmatlab(file, data, video, scale):
+def dumpmatlab(file, data, video, scale, fields):
     results = []
     for id, track in enumerate(data):
         for box in track.boxes:
             if not box.lost:
                 data = {}
-                data['id'] = id
-                data['xtl'] = box.xtl
-                data['ytl'] = box.ytl
-                data['xbr'] = box.xbr
-                data['ybr'] = box.ybr
-                data['frame'] = box.frame
-                data['lost'] = box.lost
-                data['occluded'] = box.occluded
-                data['label'] = track.label
-                data['attributes'] = box.attributes
-                data['generated'] = box.generated
+                for f in fields:
+                    d = trackletdataforfield(track, id, f)
+                    if d is None:
+                        d = boxdataforfield(box, track.velocities[box.frame], f)
+                    if data:
+                        data[f] = d
+
                 results.append(data)
 
     from scipy.io import savemat as savematlab
@@ -59,50 +156,52 @@ def dumpmatlab(file, data, video, scale):
          "height": int(video.height * scale),
          "scale": scale}, oned_as="row")
 
-def dumpxml(file, data, groundplane):
+def dumpxml(file, data, groundplane, fields):
     file.write("<annotations count=\"{0}\">\n".format(len(data)))
     for id, track in enumerate(data):
-        file.write("\t<track id=\"{0}\" label=\"{1}\">\n"
-            .format(id, track.label))
+        file.write("\t<track ")
+        for f in fields:
+            d = trackletdataforfield(track, id, f)
+            if d is not None:
+                file.write("{0}=\"{1}\" ".format(f, d))
+        file.write(">\n")
         for box in track.boxes:
-            file.write("\t\t<box frame=\"{0}\"".format(box.frame))
-            if groundplane:
-                file.write(" x=\"{0}\"".format(box.xbr))
-                file.write(" y=\"{0}\"".format(box.ybr))
-            else:
-                file.write(" xtl=\"{0}\"".format(box.xtl))
-                file.write(" ytl=\"{0}\"".format(box.ytl))
-                file.write(" xbr=\"{0}\"".format(box.xbr))
-                file.write(" ybr=\"{0}\"".format(box.ybr))
-            file.write(" outside=\"{0}\"".format(box.lost))
-            file.write(" occluded=\"{0}\">".format(box.occluded))
-            for attr in box.attributes:
-                file.write("<attribute id=\"{0}\">{1}</attribute>".format(
-                           attr.id, attr.text))
+ 
+            file.write("\t\t<box ")
+            hasattributes = False
+            for f in fields:
+                if f == "attributes":
+                    hasattributes = True
+                else:
+                    d = boxdataforfield(box, track.velocities[box.frame], f)
+                    if d is not None:
+                        file.write("{0}=\"{1}\" ".format(f, d))
+            file.write(">")
+            if hasattributes:
+                for attr in box.attributes:
+                    file.write("<attribute id=\"{0}\">{1}</attribute>".format(
+                               attr.id, attr.text))
+
             file.write("</box>\n")
         file.write("\t</track>\n")
     file.write("</annotations>\n")
 
-def dumpjson(file, data, groundplane):
+def dumpjson(file, data, groundplane, fields):
     annotations = {}
     for id, track in enumerate(data):
         result = {}
-        result['label'] = track.label
+        for f in fields:
+            d = trackletdataforfield(track, id, f)
+            if d is not None:
+                result[f] = d
+
         boxes = {}
         for box in track.boxes:
             boxdata = {}
-            if groundplane:
-                boxdata['x'] = box.xbr
-                boxdata['y'] = box.ybr
-            else:
-                boxdata['xtl'] = box.xtl
-                boxdata['ytl'] = box.ytl
-                boxdata['xbr'] = box.xbr
-                boxdata['ybr'] = box.ybr
-            boxdata['outside'] = box.lost
-            boxdata['occluded'] = box.occluded
-            boxdata['attributes'] = box.attributes
-            boxdata['generated'] = box.generated
+            for f in fields:
+                d = boxdataforfield(box, track.velocities[box.frame], f)
+                if d is not None:
+                    boxdata[f] = d
             boxes[int(box.frame)] = boxdata
         result['boxes'] = boxes
         annotations[int(id)] = result
@@ -122,35 +221,25 @@ def dumppickle(file, data):
     import pickle
     pickle.dump(annotations, file, protocol = 2)
 
+def dumptext(file, data, groundplane, fields):
+    def printdata(d, f):
+        if type(d) is int:
+            f.write(str(d))
+        elif type(d) is str:
+            f.write("\"")
+            f.write(d)
+            f.write("\"")
+        elif type(d) is list:
+            [printdata(x, f) for x in d]
 
-def dumptext(file, data, groundplane):
     for id, track in enumerate(data):
         for box in track.boxes:
-            file.write(str(id))
-            file.write(" ")
-            if not groundplane:
-                file.write(str(box.xtl))
+            for f in fields:
+                d = trackletdataforfield(track, id, f)
+                if d is None:
+                    d = boxdataforfield(box, track.velocities[box.frame], f)
+                printdata(d, file)
                 file.write(" ")
-                file.write(str(box.ytl))
-                file.write(" ")
-            file.write(str(box.xbr))
-            file.write(" ")
-            file.write(str(box.ybr))
-            file.write(" ")
-            file.write(str(box.frame))
-            file.write(" ")
-            file.write(str(box.lost))
-            file.write(" ")
-            file.write(str(box.occluded))
-            file.write(" ")
-            file.write(str(box.generated))
-            file.write(" \"")
-            file.write(track.label)
-            file.write("\"")
-            for attr in box.attributes:
-                file.write(" \"")
-                file.write(attr.text)
-                file.write("\"")
             file.write("\n")
 
 def dumplabelme(file, data, slug, folder):

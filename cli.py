@@ -19,7 +19,7 @@ import cStringIO
 import Image, ImageDraw, ImageFont
 import qa
 import merge
-import dumpcommands
+import dumptools
 import parsedatetime
 import datetime, time
 import vision.pascal
@@ -436,69 +436,21 @@ class DumpCommand(Command):
     parent.add_argument("--groundplane", action = "store_true", default=False)
     parent.add_argument("--worker", "-w", nargs = "*", default = None)
 
-    class Tracklet(object):
-        def __init__(self, label, labelid, paths, boxes, workers):
-            self.label = label
-            self.paths = paths
-            self.boxes = sorted(boxes, key = lambda x: x.frame)
-            self.workers = workers
-            self.labelid = labelid
-
-        def bind(self):
-            for path in self.paths:
-                self.boxes = Path.bindattributes(path.attributes, self.boxes)
-
     def getdata(self, args):
-        response = []
         video = session.query(Video).filter(Video.slug == args.slug)
         if video.count() == 0:
             print "Video {0} does not exist!".format(args.slug)
             raise SystemExit()
         video = video.one()
-
-        if args.merge:
-            mergemethod = merge.getpercentoverlap(args.groundplane)
-            if args.merge_method == "overlap":
-                mergemethod = merge.userid
-
-            for boxes, paths in merge.merge(video.segments, 
-                                            method=mergemethod,
-                                            threshold = args.merge_threshold,
-                                            groundplane = args.groundplane):
-                workers = list(set(x.job.workerid for x in paths))
-                tracklet = DumpCommand.Tracklet(paths[0].label.text, paths[0].labelid,
-                                                paths, boxes, workers)
-                response.append(tracklet)
-        else:
-            for segment in video.segments:
-                for job in segment.jobs:
-                    if not job.useful:
-                        continue
-                    worker = job.workerid
-                    for path in job.paths:
-                        tracklet = DumpCommand.Tracklet(path.label.text, path.labelid
-                                                        [path],
-                                                        path.getboxes(),
-                                                        [worker])
-                        response.append(tracklet)
-
+        mergemethod = merge.getpercentoverlap(args.groundplane)
+        if args.merge_method == "id":
+            mergemethod = merge.userid
+        workers = None
         if args.worker:
             workers = set(args.worker)
-            response = [x for x in response if set(x.workers) & workers]
-
-        interpolated = []
-        for track in response:
-            path = vision.track.interpolation.LinearFill(track.boxes)
-            tracklet = DumpCommand.Tracklet(track.label, track.labelid, track.paths,
-                                            path, track.workers)
-            interpolated.append(tracklet)
-        response = interpolated
-
-        for tracklet in response:
-            tracklet.bind()
-
-        return video, response
-
+        return video, dumptools.getdata(video, args.merge, mergemethod, args.merge_threshold,
+            workers, args.groundplane)
+ 
 @handler("Highlights a video sequence")
 class visualize(DumpCommand):
     def setup(self):
@@ -764,6 +716,7 @@ class dump(DumpCommand):
         parser.add_argument("--dimensions", "-d", default = None)
         parser.add_argument("--original-video", "-v", default = None)
         parser.add_argument("--lowercase", action="store_true", default=False)
+        parser.add_argument("--dump-format", default=dumptools.DEFAULT_FORMAT)
         return parser
 
     def __call__(self, args):
@@ -799,28 +752,29 @@ class dump(DumpCommand):
             if args.lowercase:
                 track.label = track.label.lower()
 
+        dumpformat = args.dump_format.split()
         if args.xml:
-            dumpcommands.dumpxml(file, data, args.groundplane)
+            dumptools.dumpxml(file, data, args.groundplane, dumpformat)
         elif args.json:
-            dumpcommands.dumpjson(file, data, args.groundplane)
+            dumptools.dumpjson(file, data, args.groundplane, dumpformat)
         elif args.matlab:
-            dumpcommands.dumpmatlab(file, data, video, scale)
+            dumptools.dumpmatlab(file, data, video, scale, dumpformat)
         elif args.pickle:
-            dumpcommands.dumppickle(file, data)
+            dumptools.dumppickle(file, data)
         elif args.labelme:
-            dumpcommands.dumplabelme(file, data, args.slug, args.labelme)
+            dumptools.dumplabelme(file, data, args.slug, args.labelme)
         elif args.pascal:
             if scale != 1:
                 print "Warning: scale is not 1, yet frames are not resizing!"
                 print "Warning: you should manually update the JPEGImages"
-            dumpcommands.dumppascal(file, video, data, args.pascal_difficult,
+            dumptools.dumppascal(file, video, data, args.pascal_difficult,
                             args.pascal_skip, args.pascal_negatives)
         elif args.forecast:
-            dumpcommands.dumpforecastdata(file, data)
+            dumptools.dumpforecastdata(file, data)
         elif args.positions:
-            dumpcommands.dumppositions(file, data)
+            dumptools.dumppositions(file, data)
         else:
-            dumpcommands.dumptext(file, data, args.groundplane)
+            dumptools.dumptext(file, data, args.groundplane, dumpformat)
 
         if args.pascal:
             return
@@ -828,8 +782,7 @@ class dump(DumpCommand):
             file.close()
         else:
             sys.stdout.write(file.getvalue())
-
-    
+ 
 @handler("Samples the performance by worker")
 class sample(Command):
     def setup(self):
