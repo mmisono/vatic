@@ -126,8 +126,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
 
     this.drawer = new BoxDrawer(videoframe);
 
-    this.counter = 0;
-    this.idcounter = job.nextid;
+    this.counter = job.nextid;
 
     this.currentobject = null;
     this.currentcolor = null;
@@ -213,7 +212,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
             me.stopnewobject();
         });
         
-        this.currentobject.initialize(this.counter, track, this.tracks, this.idcounter);
+        this.currentobject.initialize(this.counter, track, this.tracks);
         this.currentobject.stateclassify();
     }
 
@@ -243,10 +242,9 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         this.button.button("option", "disabled", false);
 
         this.counter++;
-        this.idcounter++;
     }
 
-    this.injectnewobject = function(label, userid, path, attributes)
+    this.injectnewobject = function(label, id, path, attributes)
     {
         console.log("Injecting existing object");
 
@@ -266,7 +264,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         }
         track.journal.artificialright = track.journal.rightmost();
 
-        obj.initialize(this.counter, track, this.tracks, userid);
+        obj.initialize(id, track, this.tracks);
         obj.finalize(label);
 
         for (var i = 0; i < attributes.length; i++)
@@ -280,7 +278,6 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         obj.updateboxtext();
         this.objects.push(obj);
         this.setupnewobject(obj);
-        this.counter++;
 
         return obj;
     }
@@ -368,7 +365,6 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
     this.track = null;
     this.tracks = null;
     this.label = null;
-    this.userid = null;
 
     this.onready = [];
     this.onfolddown = [];
@@ -403,10 +399,9 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
     this.selected = false;
     this.inactive = false;
 
-    this.initialize = function(id, track, tracks, userid)
+    this.initialize = function(id, track, tracks)
     {
         this.id = id;
-        this.userid = userid;
         this.track = track;
         this.tracks = tracks;
 
@@ -483,6 +478,36 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
 
     }
 
+    this.showclassifier = function(container, headertext, callback)
+    {
+        var html = "<p>" + headertext + "</p>";
+        for (var i in job.labels)
+        {
+            var id = "classification" + this.id + "_" + i;
+            html += "<div class='label'><input type='radio' name='classification" + this.id + "' id='" + id + "'> <label for='" + id + "'>" + job.labels[i] + "</label></div>";
+        }
+
+        this.classifyinst = $("<div>" + html + "</div>").appendTo(container);
+        this.classifyinst.hide().slideDown();
+
+        $("input[name='classification" + this.id + "']").click(function() {
+            me.classifyinst.slideUp(null, function() {
+                me.classifyinst.remove(); 
+            });
+
+            for (var i in me.job.labels)
+            {
+                var id = "classification" + me.id + "_" + i;
+                if ($("#" + id + ":checked").size() > 0)
+                {
+                    callback(i);
+                    break;
+                }
+            }
+
+        });
+    }
+
     this.stateclassify = function()
     {
         this.drawinst.slideUp(null, function() {
@@ -504,45 +529,31 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
         }
         else
         {
-            var html = "<p>What type of object did you just annotate?</p>";
-            for (var i in job.labels)
-            {
-                var id = "classification" + this.id + "_" + i;
-                html += "<div class='label'><input type='radio' name='classification" + this.id + "' id='" + id + "'> <label for='" + id + "'>" + job.labels[i] + "</label></div>";
-            }
-
-            this.classifyinst = $("<div>" + html + "</div>").appendTo(this.handle);
-            this.classifyinst.hide().slideDown();
-
-            $("input[name='classification" + this.id + "']").click(function() {
-                me.classifyinst.slideUp(null, function() {
-                    me.classifyinst.remove(); 
+            this.showclassifier(
+                this.handle, 
+                "What type of object did you just annotate?",
+                function(i) {
+                    me.finalize(i);
+                    me.statefolddown();
+                
                 });
-
-                for (var i in me.job.labels)
-                {
-                    var id = "classification" + me.id + "_" + i;
-                    if ($("#" + id + ":checked").size() > 0)
-                    {
-                        me.finalize(i);
-                        me.statefolddown();
-                        break;
-                    }
-                }
-
-            });
         }
     }
 
-    this.setupuserid = function() {
-        me.track.userid = me.userid;
+    this.setupid = function() {
+        me.track.id = me.id;
 
-        var textbox = $("#trackuserid"+this.id);
-        textbox.val(this.userid);
+        var textbox = $("#trackid"+this.id);
+        textbox.val(this.id);
         textbox.on('input propertychange paste', function() {
-            me.userid = textbox.val();
-            me.track.userid = me.userid;
+            me.id = textbox.val();
+            me.track.id = me.id;
+            me.setupheader();
         });
+    }
+
+    this.setupheader = function() {
+        this.header.html("<strong>" + this.job.labels[this.label] + " " + (this.id) + "</strong>");
     }
     
     this.finalize = function(labelid)
@@ -551,13 +562,27 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
         this.track.label = labelid;
 
         this.headerdetails = $("<div style='float:right;'></div>").appendTo(this.handle);
-        this.header = $("<p class='trackobjectheader'><strong>" + this.job.labels[this.label] + " " + (this.id + 1) + "</strong></p>").appendTo(this.handle).hide().slideDown();
+        this.header = $("<p class='trackobjectheader'>").appendTo(this.handle);
+        this.setupheader();
         //this.opencloseicon = $('<div class="ui-icon ui-icon-triangle-1-e"></div>').prependTo(this.header);
-        this.useridtext = $("<div><label for='trackuserid" + this.id + "'>Id: </label><input type=text id='trackuserid" + this.id + "' size=5 /></div>").appendTo(this.handle).hide().slideDown();
+        var editor = $("<div>").appendTo(this.handle);
+        this.classifier = $("<div id='classifier" + this.id + "'>").appendTo(this.handle);
+
+        editor.append("<label for='trackid" + this.id + "'>Id: </label>");
+        editor.append("<input type=text id='trackid" + this.id + "' size=5 />");
+        $("<input type=button id='trackclass" + this.id + "' value='Classify' />")
+            .appendTo(editor)
+            .click(function() {
+                me.showclassifier(me.classifier, "Select a class:", function(i) {
+                    me.label = i;
+                    me.track.label = i;
+                    me.setupheader();
+                    me.updateboxtext();
+                });
+            });
 
         this.details = $("<div class='trackobjectdetails'></div>").appendTo(this.handle).hide();
-
-        this.setupuserid();
+                this.setupid();
         this.setupdetails();
 
         this.updateboxtext();
@@ -578,7 +603,7 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
 
     this.updateboxtext = function()
     {
-        var str = "<strong>" + this.job.labels[this.label] + " " + (this.id + 1) + "</strong>";
+        var str = "<strong>" + this.job.labels[this.label] + " " + (this.id) + "</strong>";
 
         var count = 0;
         for (var i in this.job.attributes[this.track.label])
@@ -1085,7 +1110,7 @@ function CopyPasteHandler()
     this.annotations = null;
     this.cut = function(track, frame) {
         this.annotations = track.annotationstoend(frame);
-        track.cleartoendfromframe(frame);
+        track.cleartoend(frame);
     }
 
     this.paste = function(track) {

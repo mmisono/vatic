@@ -432,7 +432,7 @@ function Track(player, topviewplayer, color, position, runtracking)
     this.journal = new Journal(player.job.start, player.job.blowradius);
     this.attributejournals = {};
     this.label = null;
-    this.userid = null;
+    this.id = null;
     this.player = player;
     this.topviewplayer = topviewplayer;
     this.handle = null;
@@ -1125,7 +1125,7 @@ function Track(player, topviewplayer, color, position, runtracking)
         {
             return "";
         }
-        var str = "[" + this.label + "," + this.userid + "," + this.journal.serialize() + ",{";
+        var str = "[" + this.label + "," + this.id + "," + this.journal.serialize() + ",{";
 
         var length = 0;
         for (var i in this.attributejournals)

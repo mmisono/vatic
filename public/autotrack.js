@@ -24,7 +24,7 @@ function AutoTracker(job, tracks) {
             track.setuptracking();
             track.recordposition();
             track.cleartoend(frame);
-            var args = [this.job.jobid, frame, this.forwardtracker, track.userid];
+            var args = [this.job.jobid, frame, this.forwardtracker, track.id];
             server_post("trackforward", args, this.tracks.serialize(), function(data) {
                 track.recordtrackdata(data);
                 track.cleanuptracking();
