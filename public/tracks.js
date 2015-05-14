@@ -253,7 +253,7 @@ var track_collection_dump = null;
 /*
  * A collection of tracks.
  */
-function TrackCollection(player, topviewplayer, job, autotracker)
+function TrackCollection(player, topviewplayer, job)
 {
     var me = this;
 
@@ -261,7 +261,6 @@ function TrackCollection(player, topviewplayer, job, autotracker)
     this.topviewplayer = topviewplayer;
     this.job = job;
     this.tracks = [];
-    this.autotracker = autotracker;
     this.autotrack = false;
 
     this.onnewobject = []; 
@@ -287,7 +286,7 @@ function TrackCollection(player, topviewplayer, job, autotracker)
      */
     this.add = function(frame, position, color, existing)
     {
-        var track = new Track(this.player, this.topviewplayer, color, position, this.autotracker, (!existing && this.autotrack));
+        var track = new Track(this.player, this.topviewplayer, color, position, (!existing && this.autotrack));
         this.tracks.push(track);
 
         console.log("Added new track");
@@ -426,7 +425,7 @@ function TrackCollection(player, topviewplayer, job, autotracker)
 /*
  * A track class.
  */
-function Track(player, topviewplayer, color, position, autotracker, runtracking)
+function Track(player, topviewplayer, color, position, runtracking)
 {
     var me = this;
 
@@ -436,7 +435,6 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
     this.userid = null;
     this.player = player;
     this.topviewplayer = topviewplayer;
-    this.autotracker = autotracker;
     this.handle = null;
     this.topviewhandle = null;
     this.color = color;
@@ -1211,15 +1209,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         return new Position(xtl, ytl, xbr, ybr, occluded, outside, !keyframe);
     }
 
-    this.cleartoend = function() {
-        var frame = this.player.frame;
-        this.recordposition();
-        this.journal.clearfromframe(frame);
-        this.journal.artificialright = this.journal.rightmost();
-        this.notifyupdate();
-    }
-
-    this.cleartoendfromframe = function(frame) {
+    this.cleartoend = function(frame) {
         this.journal.clearfromframe(frame);
         this.journal.artificialright = this.journal.rightmost();
         this.notifyupdate();
@@ -1260,6 +1250,7 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
         {
             me.journal.mark(path[i][4], Position.fromdata(path[i]));
         }
+        me.journal.artificialright = me.journal.rightmost();
     }
 
     this.cleanuptracking = function() {
@@ -1309,24 +1300,6 @@ function Track(player, topviewplayer, color, position, autotracker, runtracking)
             this.estimate(frame),
             nextkeyframe['frame'],
             nextkeyframe['pos'],
-            this.label,
-            function (data) {
-                me.recordtrackdata(data);
-                me.journal.artificialright = me.journal.rightmost();
-                me.cleanuptracking();
-            }
-        );
-    }
-
-    this.tracktoend = function() {
-        var frame = this.player.frame;
-        this.setuptracking();
-        this.recordposition();
-
-        this.journal.clearfromframe(frame);
-        this.autotracker.fromframe(
-            frame,
-            this.estimate(frame),
             this.label,
             function (data) {
                 me.recordtrackdata(data);

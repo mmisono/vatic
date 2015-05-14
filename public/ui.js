@@ -6,14 +6,14 @@ function ui_build(job)
     var shortcut = new ShortcutManager();
     var videoframe = $("#videoframe");
     var player = new VideoPlayer(videoframe, job);
-    var autotracker = new AutoTracker(job);
     var planeview = null;
     if (job.homography) {
         var planeframe = $("#groundplane");
         planeview = new PlaneView(planeframe, player, job.homography);
     }
-    var tracks = new TrackCollection(player, planeview, job, autotracker);
-    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks, shortcut);
+    var tracks = new TrackCollection(player, planeview, job);
+    var autotracker = new AutoTracker(job, tracks);
+    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks, shortcut, autotracker);
 
     if (planeview) {
         planeview.initializetracks(tracks);

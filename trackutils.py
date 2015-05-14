@@ -1,12 +1,5 @@
 from models import Video, Path, Box
-
-try:
-    import cv2
-except ImportError:
-    print "Error importing OpenCV: Follow directions in the README for adding OpenCV to virtualenv"
-    import sys
-    sys.exit()
-
+import tracking.base
 
 def is_intersection((x1, y1, w1, h1), (x2, y2, w2, h2)):
     separate = (x1 + w1 < x2 or
@@ -85,23 +78,27 @@ def convert_to_db(paths, job, label):
         paths_db.append(path_db)
     return paths_db
 
-def recttobox(rect, path, track_start):
-    box = Box(path = path)
-    box.xtl = rect['rect'][0]
-    box.ytl = rect['rect'][1]
-    box.xbr = rect['rect'][0] + rect['rect'][2]
-    box.ybr = rect['rect'][1] + rect['rect'][3]
-    box.frame = rect['frame'] + track_start
-    box.generated = int(rect['generated'])
-    box.outside = 0
-    box.occluded = 0
-    return box
+def totrackpaths(paths):
+    convertedpaths = {}
+    for path in paths:
+        boxes = path.getboxes()
+        convertedpaths[path.userid] = tracking.base.Path(
+            id=path.userid,
+            label=path.label,
+            boxes={box.frame: box for box in boxes}
+        )
+    return convertedpaths
 
-def convert_track_to_path(track_start, track, job):
-    path = Path(job = job)
-    for rect in track:
-        path.boxes.append(recttobox(rect, path, track_start))
-    return path
+def fromtrackpath(path, job):
+    newpath = Path(job = job)
+    for box in path.boxes.values():
+        newpath.boxes.append(tovaticbox(newpath, box))
+    return newpath
+
+def tovaticbox(path, box):
+    newbox = Box(path = path)
+    newbox.frombox(box)
+    return newbox
 
 def get_paths(v):
     video = v

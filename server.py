@@ -5,7 +5,7 @@ import cv2
 import config
 import tempfile
 import tracking
-from tracking_helpers import convert_track_to_path
+import trackutils
 from turkic.server import handler, application
 from turkic.database import session
 from vision.track.interpolation import LinearFill
@@ -224,23 +224,21 @@ def respawnjob(id):
 
 """ TRACKING """
 @handler(post = "json")
-def trackforward(id, frame, tracker, position, tracks):
+def trackforward(id, frame, tracker, trackid, tracks):
     frame = int(frame)
+    trackid = int(trackid)
     job = session.query(Job).get(id)
     segment = job.segment
     video = segment.video
-    paths = readpaths(tracks)
-    xtl, ytl, xbr, ybr, occluded, outside, generated = position
-    labelquery = session.query(Label).get(label)
-    labeltext = ""
-    if labelquery is not None:
-        labeltext = labelquery.text
+    paths = [path for path in readpaths(tracks) if path is not None]
+    paths = trackutils.totrackpaths(paths)
 
     logger.info("Job Id: {0}".format(id))
     logger.info("Algorithm: {0}".format(tracker))
 
-    tracks = tracking.runforwardtracker(tracker, labeltext, frame, segment.stop, video.location, (xtl, ytl, xbr-xtl, ybr-ytl))
-    path = convert_track_to_path(frame, tracks, job)
+    
+    outpath = tracking.api.online(tracker, frame, segment.stop, video.location, trackid, paths)
+    path = trackutils.fromtrackpath(outpath, job)
     attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
     logger.info("Path: {0}".format(path))

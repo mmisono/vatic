@@ -1,8 +1,9 @@
-function AutoTracker(job) {
+function AutoTracker(job, tracks) {
     this.fulltracker = null;
-	this.forwardtracker = null;
-	this.bidirectionaltracker = null;
-	this.job = job;
+    this.forwardtracker = null;
+    this.bidirectionaltracker = null;
+    this.job = job;
+    this.tracks = tracks;
 
     this.full = function(callback) {
 	    // Disable interaction
@@ -17,12 +18,18 @@ function AutoTracker(job) {
         }
     }
 
-	this.fromframe = function(frame, position, label, callback) {
-	    // Disable interaction
+    this.fromframe = function(frame, track, callback) {
+        // Disable interaction
         if (this.forwardtracker) {
-            server_post("trackforward", [this.job.jobid, frame, this.forwardtracker, label], position.serialize(), function(data) {
+            track.setuptracking();
+            track.recordposition();
+            track.cleartoend(frame);
+            var args = [this.job.jobid, frame, this.forwardtracker, track.userid];
+            server_post("trackforward", args, this.tracks.serialize(), function(data) {
+                track.recordtrackdata(data);
+                track.cleanuptracking();
+                callback();
                 console.log("Successful tracked object");
-                callback(data);
             });
         } else {
             alert("Please select a forward tracking algorithm");
