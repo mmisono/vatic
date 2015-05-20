@@ -13,7 +13,7 @@ function ui_build(job)
     }
     var tracks = new TrackCollection(player, planeview, job);
     var autotracker = new AutoTracker(job, tracks);
-    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), videoframe, job, player, tracks, shortcut, autotracker);
+    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), $("#copypastecontainer"), videoframe, job, player, tracks, shortcut, autotracker);
 
     if (planeview) {
         planeview.initializetracks(tracks);
@@ -27,6 +27,7 @@ function ui_build(job)
     ui_setupclickskip(job, player, tracks, objectui);
     ui_setupkeyboardshortcuts(shortcut, job, player);
     ui_loadprevious(job, objectui);
+    ui_setupnewobjectdefaults(objectui);
 
     $("#newobjectbutton").click(function() {
         if (!mturk_submitallowed())
@@ -65,6 +66,7 @@ function ui_setup(job)
           "</tr>" +
       "</table>").appendTo(screen).css("width", "100%");
 
+    $("<div id=dialog></div>").appendTo(screen)
 
     var playerwidth = Math.max(720, job.width);
 
@@ -93,8 +95,11 @@ function ui_setup(job)
     $("#homography").append("<input id='homographyinput' type='text' />");
 
     $("#topbar").append("<div id='newobjectcontainer'>" +
-        "<div class='button' id='newobjectbutton'>New Object</div></div>");
+        "<div class='button' id='newobjectbutton'>New Object</div>" +
+        "<div class='button' id='newobjectdefaults'>Defaults</div>" +
+        "</div>");
 
+    $("<div id='copypastecontainer'></div>").appendTo("#sidebar");
     $("<div id='objectcontainer'></div>").appendTo("#sidebar");
 
     $("<div class='button' id='opentrackingoptions'>Tracking Options</div>")
@@ -146,9 +151,13 @@ function ui_setup(job)
 
     $("#advancedoptions").hide();
 
+    if (!job.pointmode) {
+        $("#advancedoptions").append(
+        "<input type='checkbox' id='annotateoptionsresize'>" +
+        "<label for='annotateoptionsresize'>Disable Resize?</label> ");
+    }
+
     $("#advancedoptions").append(
-    "<input type='checkbox' id='annotateoptionsresize'>" +
-    "<label for='annotateoptionsresize'>Disable Resize?</label> " +
     "<input type='checkbox' id='annotateoptionshideboxes'>" +
     "<label for='annotateoptionshideboxes'>Hide Boxes?</label> " +
     "<input type='checkbox' id='annotateoptionshideboxtext'>" +
@@ -327,20 +336,22 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         console.log("Changed algorighm to: " + autotracker.algorithm);
         eventlog("trackingalgorithm", "FPS = " + autotracker.algorithm);
     });
+ 
+    if (!job.pointmode) {
+        $("#annotateoptionsresize").button().click(function() {
+            var resizable = $(this).attr("checked") ? false : true;
+            tracks.resizable(resizable);
 
-    $("#annotateoptionsresize").button().click(function() {
-        var resizable = $(this).attr("checked") ? false : true;
-        tracks.resizable(resizable);
-
-        if (resizable)
-        {
-            eventlog("disableresize", "Objects can be resized");
-        }
-        else
-        {
-            eventlog("disableresize", "Objects can not be resized");
-        }
-    });
+            if (resizable)
+            {
+                eventlog("disableresize", "Objects can be resized");
+            }
+            else
+            {
+                eventlog("disableresize", "Objects can not be resized");
+            }
+        });
+    }
 
     $("#annotateoptionshideboxes").button().click(function() {
         var visible = !$(this).attr("checked");
@@ -409,8 +420,9 @@ function ui_setupkeyboardshortcuts(shortcutmanager, job, player)
         skipcallback(job.skip > 0 ? -job.skip : -1));
 }
 
-function ui_canresize()
+function ui_canresize(job)
 {
+    if (job.pointmode) return false;
     return !$("#annotateoptionsresize").attr("checked"); 
 }
 
@@ -488,7 +500,7 @@ function ui_setupclickskip(job, player, tracks, objectui)
             $("#newobjectbutton").button("option", "disabled", false);
             $("#playbutton").button("option", "disabled", false);
             tracks.draggable(true);
-            tracks.resizable(ui_canresize());
+            tracks.resizable(ui_canresize(job));
             tracks.recordposition();
             objectui.enable();
         }
@@ -524,6 +536,32 @@ function ui_loadprevious(job, objectui)
                                      data[i]["attributes"]);
         }
     });
+}
+
+function ui_setupnewobjectdefaults(objectui) {
+    var dialog = $("#dialog").dialog({
+        autoOpen: false,
+        height: 300,
+        width: 350,
+        modal: true,
+        buttons: {
+            "Save": function() {
+                objectui.savedefaults();
+                dialog.dialog("close");
+            },
+            Cancel: function() {
+                dialog.dialog("close");
+            }
+        },
+        close: function() {}
+    });
+
+    $("#newobjectdefaults")
+        .button({icons: {primary: 'ui-icon-gear'}})
+        .click(function() {
+            dialog.dialog("open");
+            objectui.defaultsdialog(dialog);
+        });
 }
 
 function ui_setupsubmit(job, tracks)

@@ -19,6 +19,7 @@ function Job(data)
     this.onlinetrackers = [];
     this.bidirectionaltrackers = [];
     this.multiobjecttrackers = [];
+    this.pointmode = null;
 
     this.frameurl = function(i)
     {
@@ -51,6 +52,7 @@ function job_import(data)
     job.bidirectionaltrackers = data["trackers"]["bidirectional"];
     job.multiobjecttrackers = data["trackers"]["multiobject"];
     job.nextid = parseInt(data["nextid"]);
+    job.pointmode = parseInt(data["pointmode"]) ? true : false;
 
     console.log("Job configured!");
     console.log("  Slug: " + job.slug);

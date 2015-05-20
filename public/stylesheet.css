@@ -145,6 +145,23 @@ canvas
     width : 80px;
 }
 
+#copypastecontainer
+{
+
+    font-family : Arial;
+    font-size : 14px;
+    background-color: yellow;
+    padding: 5px;
+    border-bottom: 2px solid black;
+}
+
+#copypastecontainer .title
+{
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
 #newobjectcontainer
 {
     text-align : center;

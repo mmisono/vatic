@@ -44,7 +44,7 @@ function PlaneView(handle, player, homography)
     this.drawalltrajectories = function(tracks) {
         for (var i in tracks.tracks)
         {
-            this.drawtrajectory(tracks.tracks[i]);
+            //this.drawtrajectory(tracks.tracks[i]);
         }
     }
 

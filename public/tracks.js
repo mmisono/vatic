@@ -1,9 +1,12 @@
 /*
  * Allows the user to draw a box on the screen.
  */
-function BoxDrawer(container)
+function BoxDrawer(container, defaultsize, oneclick)
 {
     var me = this;
+
+    this.defaultsize = defaultsize;
+    this.oneclick = oneclick;
 
     this.onstartdraw = [];
     this.onstopdraw = []
@@ -79,7 +82,18 @@ function BoxDrawer(container)
     {
         if (this.enabled)
         {
-            if (!this.drawing)
+            if (this.oneclick)
+            {
+                this.drawing = true;
+                var minx = xc - (this.defaultsize["width"] / 2);
+                var miny = yc - (this.defaultsize["height"] / 2);
+                var maxx = xc + (this.defaultsize["width"] / 2);
+                var maxy = yc + (this.defaultsize["height"] / 2);
+                this.startx = minx;
+                this.starty = miny;
+                this.finishdrawing(maxx, maxy);
+            }
+            else if (!this.drawing)
             {
                 this.startdrawing(xc, yc);
             }
@@ -186,7 +200,7 @@ function BoxDrawer(container)
             }
 
             this.drawing = false;
-            this.handle.remove();
+            if (this.handle) this.handle.remove();
             this.startx = 0;
             this.starty = 0;
         }
@@ -694,6 +708,7 @@ function Track(player, topviewplayer, color, position, runtracking)
         this.journal.mark(this.player.frame, pos);
         this.journal.artificialright = this.journal.rightmost();
         this.journal.cleartonextkeyframe(this.player.frame);
+        this.journal.artificialright = this.journal.rightmost();
         this.draw(this.player.frame, pos);
     }
 
@@ -1365,7 +1380,7 @@ function Journal(start, blowradius)
             var item = this.annotations[t];
             itemtime = parseInt(t);
 
-            if (itemtime > frame)
+            if (itemtime > frame && !item.generated)
             {
                 if (next == null || itemtime < nexttime) 
                 {
@@ -1388,7 +1403,7 @@ function Journal(start, blowradius)
             var item = this.annotations[t];
             itemtime = parseInt(t);
 
-            if (itemtime < frame)
+            if (itemtime < frame && !item.generated)
             {
                 if (previous == null || itemtime > previoustime) 
                 {

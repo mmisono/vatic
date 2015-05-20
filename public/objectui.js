@@ -27,7 +27,9 @@ function TrackEditor(shortcuts, videoframe)
             pos.ybr = y + (0.5 * pos.height);
             pos.xtl = x - (0.5 * pos.width);
             pos.ytl = y - (0.5 * pos.height);
+            pos.generated = false;
             me.track.moveboundingbox(pos);
+            if (pos.outside) me.track.setoutside(false);
         });
     }
 
@@ -108,7 +110,7 @@ function TrackEditor(shortcuts, videoframe)
     this.initializeshortucts();
 }
 
-function TrackObjectUI(button, container, videoframe, job, player, tracks, shortcuts, autotracker)
+function TrackObjectUI(button, container, copypastecontainer, videoframe, job, player, tracks, shortcuts, autotracker)
 {
     var me = this;
 
@@ -121,10 +123,10 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
     this.shortcuts = shortcuts;
     this.autotracker = autotracker;
 
-    this.copypastehandler = new CopyPasteHandler();
+    this.copypastehandler = new CopyPasteHandler(copypastecontainer, this.job);
     this.trackeditor = new TrackEditor(this.shortcuts, this.videoframe);
 
-    this.drawer = new BoxDrawer(videoframe);
+    this.drawer = new BoxDrawer(videoframe, {"width":10, "height":10}, this.job.pointmode);
 
     this.counter = job.nextid;
 
@@ -134,6 +136,93 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
     this.objects = [];
 
     this.selectedobject = null;
+
+    this.defaultsize = function(container) {
+        $("<input type=checkbox id=usedefaultsize />" +
+        "<label for=usedefaultsize>Default bounding box size</label>").appendTo(container);
+
+        var sizeeditor = $("<div>").appendTo(container);
+        var testbox = $("<div id=testbox>").css({
+            "border": "solid 2px blue",
+            "width": this.drawer.defaultsize["width"] + "px",
+            "height": this.drawer.defaultsize["height"] + "px",
+            "margin-bottom": "10px",
+            "margin-top": "20px"
+        })
+
+        $("<label for=defaultwidth>Width:</label>").appendTo(sizeeditor);
+        $("<div id=defaultwidth>")
+            .slider({
+                min: 0,
+                max: 200,
+                value: this.drawer.defaultsize ["width"],
+                slide: function (event, ui) {
+                    testbox.css({width: ui.value});
+                }
+            })
+            .css({"width":"200px"})
+            .appendTo(sizeeditor);
+
+        $("<label for=defaultheigh>Height:</label>").appendTo(sizeeditor);
+        $("<div id=defaultheight>")
+            .slider({
+                min: 0,
+                max: 200,
+                value: this.drawer.defaultsize ["height"],
+                slide: function (event, ui) {
+                    testbox.css({height: ui.value});
+                }
+            })
+            .css({"width":"200px"})
+            .appendTo(sizeeditor);
+ 
+        testbox.appendTo(sizeeditor);
+
+        if (this.drawer.oneclick) {
+            $("#usedefaultsize").attr('checked', 'checked');
+        } else {
+            sizeeditor.hide();
+        }    
+
+        $("#usedefaultsize").change(function() {
+            if ($(this).is(":checked")) {
+                sizeeditor.show();
+            } else {
+                sizeeditor.hide();
+            }
+        });
+    }
+
+    this.defaultclass = function(container) {
+        var html = "<p>Select default class</p>";
+        for (var i in job.labels)
+        {
+            html += "<div class='label'>" +
+                "<input type='radio' name='classification' id='classification" + i + "' value='" + i + "'>" +
+                "<label for='classification" + i + "'>" + job.labels[i] + "</label></div>";
+        }
+
+        this.classifyinst = $("<div>" + html + "</div><br />").appendTo(container);
+
+    }
+
+    this.defaultsdialog = function(container) {
+        this.defaultclass(container);
+        if (!this.job.pointmode) {
+            this.defaultsize(container);
+        }
+    }
+
+    this.savedefaults = function() {
+        if (!this.job.pointmode) {
+            if (!this.job.pointmode) this.drawer.oneclick = $("#usedefaultsize").attr('checked');
+            this.drawer.defaultsize["width"] = $('#defaultwidth').slider("option", "value");
+            this.drawer.defaultsize["height"] = $('#defaultheight').slider("option", "value");
+        }
+
+        alert($("input[name=classification]:checked").val());
+
+    }
 
     this.deselectcurrentobject = function()
     {
@@ -204,6 +293,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         console.log("Received new track object drawing");
 
         var track = tracks.add(player.frame, position, this.currentcolor[0], false);
+        if (this.job.pointmode) this.tracks.resizable(false);
 
         this.drawer.disable();
         ui_disable();
@@ -227,7 +317,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
         this.setupnewobject(this.currentobject);
 
         this.tracks.draggable(true);
-        if ($("#annotateoptionsresize:checked").size() == 0)
+        if (!this.job.pointmode && $("#annotateoptionsresize:checked").size() == 0)
         {
             this.tracks.resizable(true);
         }
@@ -238,6 +328,7 @@ function TrackObjectUI(button, container, videoframe, job, player, tracks, short
 
         this.tracks.dim(false);
         this.currentobject.track.highlight(false);
+        this.selectobject(this.currentobject);
 
         this.button.button("option", "disabled", false);
 
@@ -722,10 +813,10 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
             me.track.tracktopreviouskeyframe();
         });
         $("#trackobject" + this.id + "cutend").click(function() {
-            me.copypastehandler.cut(me.track, me.player.frame);
+            me.copypastehandler.cut(me, me.player.frame);
         });
         $("#trackobject" + this.id + "paste").click(function() {
-            me.copypastehandler.paste(me.track);
+            me.copypastehandler.paste(me);
         });
 
         this.player.onupdate.push(function() {
@@ -1105,23 +1196,46 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
     }
 }
 
-function CopyPasteHandler()
+function CopyPasteHandler(container, job)
 {
+    var me = this;
+
     this.annotations = null;
-    this.cut = function(track, frame) {
+    this.job = job;
+    this.container = container;
+    this.container.hide();
+
+    this.cut = function(trackobject, frame) {
+        var track = trackobject.track;
         this.annotations = track.annotationstoend(frame);
+
+        this.container.empty();
+        this.container.append("<div class='title'>Clipboard</div>");
+        this.container.append("<strong>Cut: </strong>" + this.annotations.length + " frames<br />");
+        this.container.append("<strong>From: </strong> " + this.job.labels[track.label] + " " + track.id + "<br />");
+        $("<input type=button value='Clear' />")
+            .appendTo(this.container)
+            .click(function() {
+                me.annotations = null;
+                me.container.slideUp(null, function() {me.container.empty();});
+            });
+
+        this.container.slideDown();
         track.cleartoend(frame);
     }
 
-    this.paste = function(track) {
+    this.paste = function(trackobject) {
         if (!this.annotations) {
             alert("Nothing to paste");
             return;
         }
 
+        var track = trackobject.track;
         var range = this.framerange();
         track.clearbetweenframes(range['min'], range['max']);
         track.addannotations(this.annotations);
+        trackobject.toggletooltip(false);
+        setTimeout(function() {trackobject.hidetooltip();}, 3000);
     }
 
     this.framerange = function() {

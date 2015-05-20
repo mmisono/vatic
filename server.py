@@ -70,6 +70,7 @@ def getjob(id, verified):
         "homography":   homography,
         "trackers":     tracking.api.gettrackers(),
         "nextid":       video.nextid(),
+        "pointmode":    int(video.pointmode),
     }
 
 @handler()

@@ -36,6 +36,7 @@ class Video(turkic.database.Base):
     trainvalidator  = Column(PickleType, nullable = True, default = None)
     blowradius      = Column(Integer, default = 5)
     homographylocation  = Column(String(250), nullable = True, default = None)
+    pointmode       = Column(Boolean, default = False)
 
     def __getitem__(self, frame):
         path = Video.getframepath(frame, self.location)
