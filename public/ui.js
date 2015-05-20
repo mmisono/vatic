@@ -559,6 +559,7 @@ function ui_setupnewobjectdefaults(objectui) {
     $("#newobjectdefaults")
         .button({icons: {primary: 'ui-icon-gear'}})
         .click(function() {
+            dialog.empty();
             dialog.dialog("open");
             objectui.defaultsdialog(dialog);
         });

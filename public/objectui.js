@@ -127,6 +127,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     this.trackeditor = new TrackEditor(this.shortcuts, this.videoframe);
 
     this.drawer = new BoxDrawer(videoframe, {"width":10, "height":10}, this.job.pointmode);
+    this.defaultclass = null;
 
     this.counter = job.nextid;
 
@@ -193,8 +194,12 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         });
     }
 
-    this.defaultclass = function(container) {
+    this.editdefaultclass = function(container) {
         var html = "<p>Select default class</p>";
+        html += "<div class='label'>";
+        html += "<input type='radio' name='classification' id='classificationnone' value='none' checked>";
+        html += "<label for='classificationnone'>None</label></div>";
+
         for (var i in job.labels)
         {
             html += "<div class='label'>" +
@@ -204,10 +209,15 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
         this.classifyinst = $("<div>" + html + "</div><br />").appendTo(container);
 
+        if (this.defaultclass) {
+            $("#classification" + this.defaultclass).attr("checked", "checked");
+        } else {
+            $("#classificationnone").attr("checked", "checked");
+        }
     }
 
     this.defaultsdialog = function(container) {
-        this.defaultclass(container);
+        this.editdefaultclass(container);
         if (!this.job.pointmode) {
             this.defaultsize(container);
         }
@@ -220,8 +230,15 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
             this.drawer.defaultsize["height"] = $('#defaultheight').slider("option", "value");
         }
 
-        alert($("input[name=classification]:checked").val());
+        this.defaultclass = $("input[name=classification]:checked").val();
+        if (this.defaultclass == "none") {
+            this.defaultclass = null;
+        }
 
+        for (var i in this.objects)
+        {
+            this.objects[i].defaultclass = this.defaultclass;
+        }
     }
 
     this.deselectcurrentobject = function()
@@ -281,7 +298,8 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
                                              this.container,
                                              this.currentcolor,
                                              this.copypastehandler,
-                                             this.autotracker);
+                                             this.autotracker,
+                                             this.defaultclass);
         this.currentobject.statedraw();
 
         this.tracks.resizable(false);
@@ -345,7 +363,8 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         var obj = new TrackObject(this.job, this.player,
                                   container, this.currentcolor,
                                   this.copypastehandler,
-                                  this.autotracker);
+                                  this.autotracker,
+                                  this.defaultclass);
 
         var track = tracks.add(path[0][4], Position.fromdata(path[0]),
                                this.currentcolor[0], true);
@@ -441,7 +460,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     }
 }
 
-function TrackObject(job, player, container, color, copypastehandler, autotracker)
+function TrackObject(job, player, container, color, copypastehandler, autotracker, defaultclass)
 {
     var me = this;
 
@@ -451,6 +470,7 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
     this.color = color;
     this.copypastehandler = copypastehandler;
     this.autotracker = autotracker;
+    this.defaultclass = defaultclass;
 
     this.id = null;
     this.track = null;
@@ -616,6 +636,11 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
         if (length == 1)
         {
             this.finalize(firsti);
+            this.statefolddown();
+        }
+        else if (this.defaultclass)
+        {
+            this.finalize(this.defaultclass);
             this.statefolddown();
         }
         else
