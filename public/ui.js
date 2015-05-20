@@ -66,7 +66,7 @@ function ui_setup(job)
           "</tr>" +
       "</table>").appendTo(screen).css("width", "100%");
 
-    $("<div id=dialog></div>").appendTo(screen)
+    $("<div id='defaultsdialog' title='New Object Defaults'></div>").appendTo(screen)
 
     var playerwidth = Math.max(720, job.width);
 
@@ -539,9 +539,9 @@ function ui_loadprevious(job, objectui)
 }
 
 function ui_setupnewobjectdefaults(objectui) {
-    var dialog = $("#dialog").dialog({
+    var dialog = $("#defaultsdialog").dialog({
         autoOpen: false,
-        height: 300,
+        height: 500,
         width: 350,
         modal: true,
         buttons: {

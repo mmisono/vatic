@@ -139,8 +139,9 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     this.selectedobject = null;
 
     this.defaultsize = function(container) {
+        $("<p>Default bounding box</p>").appendTo(container);
         $("<input type=checkbox id=usedefaultsize />" +
-        "<label for=usedefaultsize>Default bounding box size</label>").appendTo(container);
+        "<label for=usedefaultsize>Enabled</label>").appendTo(container);
 
         var sizeeditor = $("<div>").appendTo(container);
         var testbox = $("<div id=testbox>").css({
