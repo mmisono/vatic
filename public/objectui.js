@@ -711,7 +711,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
             me.updateboxtext();
         });
 
-        if (track) this.track.autotrackend(function(){});
+        if (track) this.track.runautotracker(function(){});
     }
 
     this.updateboxtext = function()
@@ -752,6 +752,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         //this.trackingdetails.append("<div style='float:left; cursor:pointer;'>" + 
         //    "<div class='ui-icon ui-icon-arrow-1-w' id='trackobject" + this.id + "trackbackward' title='Track to beginning'></div>" + 
         //    "</div>");
+        /*
         this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
             "<div class='ui-icon ui-icon-arrowstop-1-w' id='trackobject" + this.id + "trackbackwardstop' title='Track to previous key frame'></div>" + 
             "</div>");
@@ -761,6 +762,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
             "<div class='ui-icon ui-icon-arrow-1-e' id='trackobject" + this.id + "trackforward' title='Track to end'></div>" + 
             "</div>");
+        */
         this.trackingdetails.append("<div style='float:left;cursor:pointer;'>" + 
             "<div class='ui-icon ui-icon-scissors' id='trackobject" + this.id + "cutend' title='Cut to end'></div>" + 
             "</div>");
@@ -831,6 +833,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
                 eventlog("markocclusion", "Mark object as not occluded");
             }
         });
+        /*
         $("#trackobject" + this.id + "trackforward").click(function() {
             me.track.autotrackend(function(){});
         });
@@ -840,6 +843,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         $("#trackobject" + this.id + "trackbackwardstop").click(function() {
             me.track.autotrackprev(function(){});
         });
+        */
         $("#trackobject" + this.id + "cutend").click(function() {
             me.copypastehandler.cut(me, me.player.frame);
         });
