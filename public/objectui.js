@@ -110,7 +110,7 @@ function TrackEditor(shortcuts, videoframe)
     this.initializeshortucts();
 }
 
-function TrackObjectUI(button, container, copypastecontainer, videoframe, job, player, tracks, shortcuts, autotracker)
+function TrackObjectUI(button, container, copypastecontainer, videoframe, job, player, tracks, shortcuts)
 {
     var me = this;
 
@@ -121,7 +121,6 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     this.player = player;
     this.tracks = tracks;
     this.shortcuts = shortcuts;
-    this.autotracker = autotracker;
 
     this.copypastehandler = new CopyPasteHandler(copypastecontainer, this.job);
     this.trackeditor = new TrackEditor(this.shortcuts, this.videoframe);
@@ -299,7 +298,6 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
                                              this.container,
                                              this.currentcolor,
                                              this.copypastehandler,
-                                             this.autotracker,
                                              this.defaultclass);
         this.currentobject.statedraw();
 
@@ -311,7 +309,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     {
         console.log("Received new track object drawing");
 
-        var track = tracks.add(player.frame, position, this.currentcolor[0], false);
+        var track = tracks.add(player.frame, position, this.currentcolor[0]);
         if (this.job.pointmode) this.tracks.resizable(false);
 
         this.drawer.disable();
@@ -364,11 +362,10 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         var obj = new TrackObject(this.job, this.player,
                                   container, this.currentcolor,
                                   this.copypastehandler,
-                                  this.autotracker,
                                   this.defaultclass);
 
         var track = tracks.add(path[0][4], Position.fromdata(path[0]),
-                               this.currentcolor[0], true);
+                               this.currentcolor[0]);
         for (var i = 1; i < path.length; i++)
         {
             track.journal.mark(path[i][4], Position.fromdata(path[i]));
@@ -376,7 +373,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         track.journal.artificialright = track.journal.rightmost();
 
         obj.initialize(id, track, this.tracks);
-        obj.finalize(label);
+        obj.finalize(label, false);
 
         for (var i = 0; i < attributes.length; i++)
         {
@@ -461,7 +458,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     }
 }
 
-function TrackObject(job, player, container, color, copypastehandler, autotracker, defaultclass)
+function TrackObject(job, player, container, color, copypastehandler, defaultclass)
 {
     var me = this;
 
@@ -470,7 +467,6 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
     this.container = container;
     this.color = color;
     this.copypastehandler = copypastehandler;
-    this.autotracker = autotracker;
     this.defaultclass = defaultclass;
 
     this.id = null;
@@ -535,13 +531,10 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
         });
 
         this.track.onstarttracking.push(function() {
-            console.log("Start tracking");
-            var boxtext = "<strong>(Tracking)</strong>";
-            me.track.settext(boxtext);
+            me.updateboxtext();
         })
 
         this.track.ondonetracking.push(function() {
-            console.log("Done tracking");
             me.updateboxtext();
         })
 
@@ -636,12 +629,12 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
 
         if (length == 1)
         {
-            this.finalize(firsti);
+            this.finalize(firsti, true);
             this.statefolddown();
         }
         else if (this.defaultclass)
         {
-            this.finalize(this.defaultclass);
+            this.finalize(this.defaultclass, true);
             this.statefolddown();
         }
         else
@@ -650,7 +643,7 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
                 this.handle, 
                 "What type of object did you just annotate?",
                 function(i) {
-                    me.finalize(i);
+                    me.finalize(i, true);
                     me.statefolddown();
                 
                 });
@@ -666,6 +659,7 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
             me.id = textbox.val();
             me.track.id = me.id;
             me.setupheader();
+            me.updateboxtext();
         });
     }
 
@@ -673,7 +667,7 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
         this.header.html("<strong>" + this.job.labels[this.label] + " " + (this.id) + "</strong>");
     }
     
-    this.finalize = function(labelid)
+    this.finalize = function(labelid, track)
     {
         this.label = labelid;
         this.track.label = labelid;
@@ -716,10 +710,18 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
         this.player.onupdate.push(function() {
             me.updateboxtext();
         });
+
+        if (track) this.track.autotrackend(function(){});
     }
 
     this.updateboxtext = function()
     {
+        if (this.track.istracking()) {
+            var str = "<strong>Tracking</strong>";
+            this.track.settext(str);
+            return;
+        }
+
         var str = "<strong>" + this.job.labels[this.label] + " " + (this.id) + "</strong>";
 
         var count = 0;
@@ -830,13 +832,13 @@ function TrackObject(job, player, container, color, copypastehandler, autotracke
             }
         });
         $("#trackobject" + this.id + "trackforward").click(function() {
-            me.autotracker.fromframe(me.player.frame, me.track, function(){});
+            me.track.autotrackend(function(){});
         });
         $("#trackobject" + this.id + "trackforwardstop").click(function() {
-            me.track.tracktonextkeyframe();
+            me.track.autotracknext(function(){});
         });
         $("#trackobject" + this.id + "trackbackwardstop").click(function() {
-            me.track.tracktopreviouskeyframe();
+            me.track.autotrackprev(function(){});
         });
         $("#trackobject" + this.id + "cutend").click(function() {
             me.copypastehandler.cut(me, me.player.frame);

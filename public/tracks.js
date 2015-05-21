@@ -276,6 +276,8 @@ function TrackCollection(player, topviewplayer, job)
     this.job = job;
     this.tracks = [];
     this.autotrack = false;
+    this.forwardtracker = null;
+    this.bidirectionaltracker = null;
 
     this.onnewobject = []; 
 
@@ -295,12 +297,13 @@ function TrackCollection(player, topviewplayer, job)
         me.update(me.player.frame);
     });
 
+
     /*
      * Creates a new object.
      */
-    this.add = function(frame, position, color, existing)
+    this.add = function(frame, position, color)
     {
-        var track = new Track(this.player, this.topviewplayer, color, position, (!existing && this.autotrack));
+        var track = new Track(this, this.player, this.topviewplayer, color, position, this.autotrack, this.forwardtracker, this.bidirectionaltracker);
         this.tracks.push(track);
 
         console.log("Added new track");
@@ -311,6 +314,33 @@ function TrackCollection(player, topviewplayer, job)
         }
 
         return track;
+    }
+
+    this.setautotrack = function(value)
+    {
+        this.autotrack = value;
+        for (var i in this.tracks)
+        {
+            this.tracks[i].autotrack = value;
+        }
+    }
+
+    this.setforwardtracker = function(value)
+    {
+        this.forwardtracker = value;
+        for (var i in this.tracks)
+        {
+            this.tracks[i].forwardtracker = value;
+        }
+    }
+
+    this.setbidirectionaltracker = function(value)
+    {
+        this.bidirectionaltracker = value;
+        for (var i in this.tracks)
+        {
+            this.tracks[i].bidirectionaltracker = value;
+        }
     }
 
     this.removeall = function()
@@ -439,10 +469,11 @@ function TrackCollection(player, topviewplayer, job)
 /*
  * A track class.
  */
-function Track(player, topviewplayer, color, position, runtracking)
+function Track(tracks, player, topviewplayer, color, position, autotrack, forwardtracker, bidirectionaltracker)
 {
     var me = this;
 
+    this.tracks = tracks;
     this.journal = new Journal(player.job.start, player.job.blowradius);
     this.attributejournals = {};
     this.label = null;
@@ -456,6 +487,11 @@ function Track(player, topviewplayer, color, position, runtracking)
     this.text = "";
     this.deleted = false;
     this.offset = 0;
+    this.forwardtracker = forwardtracker;
+    this.bidirectionaltracker = bidirectionaltracker;
+    this.autotrack = autotrack;
+    this.forwardrequest = null;
+    this.backrequest = null;
 
     this.onmouseover = [];
     this.onmouseout = [];
@@ -957,6 +993,7 @@ function Track(player, topviewplayer, color, position, runtracking)
                     me.fixposition();
                     me.recordposition();
                     me.notifyupdate();
+                    if (me.autotrack) me.autotrackcombo(function() {});
                     eventlog("draggable", "Drag-n-drop a box");
                 },
                 cancel: ".boundingboxtext"
@@ -1230,6 +1267,18 @@ function Track(player, topviewplayer, color, position, runtracking)
         this.notifyupdate();
     }
 
+    this.cleartopreviouskeyframe = function(frame) {
+        this.journal.cleartopreviouskeyframe(frame);
+        this.journal.artificialright = this.journal.rightmost();
+        this.notifyupdate();
+    }
+
+    this.cleartonextkeyframe = function(frame) {
+        this.journal.cleartonextkeyframe(frame);
+        this.journal.artificialright = this.journal.rightmost();
+        this.notifyupdate();
+    }
+
     this.clearbetweenframes = function(frame1, frame2) {
         this.journal.clearbetweenframes(frame1, frame2);
         this.journal.artificialright = this.journal.rightmost();
@@ -1253,17 +1302,18 @@ function Track(player, topviewplayer, color, position, runtracking)
     }
 
     this.setuptracking = function() {
-        this.setlock(true);
         this.notifystarttracking();
     }
 
-    this.recordtrackdata = function(data) {
+    this.recordtrackdata = function(data, start, stop) {
         if (!data) return;
 
         var path = data.boxes;
         for (var i = 1; i < path.length; i++)
         {
-            me.journal.mark(path[i][4], Position.fromdata(path[i]));
+            var frame = path[i][4];
+            if ((start == null || start < frame) && (stop == null || frame < stop))
+                me.journal.mark(frame, Position.fromdata(path[i]));
         }
         me.journal.artificialright = me.journal.rightmost();
     }
@@ -1274,60 +1324,119 @@ function Track(player, topviewplayer, color, position, runtracking)
         me.notifyupdate();
     }
 
-    this.tracktopreviouskeyframe = function() {
-        var frame = this.player.frame;
-        this.setuptracking();
-        this.recordposition();
-        var previouskeyframe = this.journal.previouskeyframe(frame);
-        if (previouskeyframe['pos'] == null) {
-            console.log("No previous key frame");
-            return;
-        } 
-
-        this.journal.cleartopreviouskeyframe(frame);
-        this.autotracker.betweenframes(
-            previouskeyframe['frame'],
-            previouskeyframe['pos'],
-            frame,
-            this.estimate(frame),
-            this.label,
-            function (data) {
-                me.recordtrackdata(data);
-                me.journal.artificialright = me.journal.rightmost();
-                me.cleanuptracking();
-            }
-        );
+    this.previouskeyframe = function(frame) {
+        var prev = this.journal.previouskeyframe(frame);
+        if (prev['pos'] == null) return null;
+        return prev['frame'];
     }
 
-    this.tracktonextkeyframe = function() {
-        var frame = this.player.frame;
-        this.setuptracking();
-        this.recordposition();
-        var nextkeyframe = this.journal.nextkeyframe(frame);
-        if (nextkeyframe['pos'] == null) {
-            this.tracktoend();
+    this.nextkeyframe = function(frame) {
+        var next = this.journal.nextkeyframe(frame);
+        if (next['pos'] == null) return null;
+        return next['frame'];
+    }
+
+    this.istracking = function() {
+        return this.forwardrequest || this.backrequest;
+    }
+
+    this.abortrequests = function() {
+        if (this.forwardrequest) this.forwardrequest.abort();
+        if (this.backrequest) this.backrequest.abort();
+    }
+
+    this.autotrackcombo = function(callback) {
+        this.abortrequests();
+        var callcount = 0;
+        function c() {
+            if (callcount == 1) callback()
+            else callcount++;
+        }
+        this.autotracknext(c);
+        this.autotrackprev(c);
+    }
+
+    this.autotrackrequest = function(args, api, start, stop, callback) {
+        return server_post(api, args, this.tracks.serialize(), function(data) {
+            me.recordtrackdata(data, start, stop);
+            me.cleanuptracking();
+            me.currentrequest = null;
+            callback();
+            console.log("Successful tracked object");
+        });
+    }
+
+    this.autotrackend = function(callback) {
+        if (this.forwardtracker) {
+            var frame = this.player.frame;
+            this.setuptracking();
+            this.recordposition();
+            this.cleartoend(frame);
+            var args = [this.player.job.jobid, frame, this.forwardtracker, this.id];
+            this.forwardrequest = this.autotrackrequest(args, "trackforward", frame, null,
+                function() {
+                    me.forwardrequest = null;
+                    callback();
+                });
+        } else {
+            alert("Please select a forward tracking algorithm");
+            callback();
+        }
+    }
+
+    this.autotrackprev = function(callback) {
+        if (this.bidirectionaltracker == null) {
+            alert("Please select a bidirectional tracking algorithm");
+            callback();
             return;
         }
 
-        this.journal.cleartonextkeyframe(frame);
-        this.autotracker.betweenframes(
-            frame,
-            this.estimate(frame),
-            nextkeyframe['frame'],
-            nextkeyframe['pos'],
-            this.label,
-            function (data) {
-                me.recordtrackdata(data);
-                me.journal.artificialright = me.journal.rightmost();
-                me.cleanuptracking();
-            }
-        );
+        var frame = this.player.frame;
+        var prev = this.previouskeyframe(frame);
+        if (prev == null) {
+            callback();
+            return;
+        }
+
+        this.setuptracking();
+        this.recordposition();
+        this.cleartopreviouskeyframe(frame);
+
+        var args = [this.player.job.jobid, prev, frame, this.bidirectionaltracker, this.id];
+        this.backrequest = this.autotrackrequest(args, "trackbetweenframes", prev, frame,
+            function() {
+                me.backrequest = null;
+                callback();
+            });
+    }
+
+    this.autotracknext = function(callback) {
+        if (this.bidirectionaltracker == null) {
+            alert("Please select a bidirectional tracking algorithm");
+            callback();
+            return;
+        }
+
+        var frame = this.player.frame;
+        var next = this.nextkeyframe(frame);
+        if (next == null) {
+            this.autotrackend(frame, callback);
+            return;
+        }
+
+        this.setuptracking();
+        this.recordposition();
+        this.cleartonextkeyframe(frame);
+
+        var args = [this.player.job.jobid, frame, next, this.bidirectionaltracker, this.id];
+        this.forwardrequest = this.autotrackrequest(args, "trackbetweenframes", frame, next,
+            function() {
+                me.forwardrequest = null;
+                callback();
+            });
     }
 
     this.draw(this.player.frame);
-    if (runtracking) {
-        this.tracktoend(this.player.frame);
-    }
 }
 
 /*

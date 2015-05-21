@@ -193,8 +193,11 @@ def savejob(id, tracks):
                     if (frames[0] < segment.start < frames[-1]
                             and segment.start not in frames):
                         newbox = Box(path=path)
-                        newbox.frombox([box for box in LinearFill(boxes)
-                            if box.frame == segment.start][0])
+                        newbox.generated = False
+                        newbox.frombox(
+                            [box for box in LinearFill(boxes)
+                            if box.frame == segment.start][0]
+                        )
 
                     job.paths.append(path)
 
@@ -237,9 +240,11 @@ def trackforward(id, frame, tracker, trackid, tracks):
     logger.info("Job Id: {0}".format(id))
     logger.info("Algorithm: {0}".format(tracker))
 
+    start = frame
+    stop = segment.stop
     
-    outpath = tracking.api.online(tracker, frame, segment.stop, video.location, trackid, paths)
-    path = trackutils.fromtrackpath(outpath, job)
+    outpath = tracking.api.online(tracker, start, stop, video.location, trackid, paths)
+    path = trackutils.fromtrackpath(outpath, job, start, stop)
     attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
 
     logger.info("Path: {0}".format(path))
@@ -265,7 +270,35 @@ def trackfull(id, tracker):
     } for path, attrs in zip(allpaths, allattrs)]
 
 @handler(post = "json")
-def trackbetweenframes(id, leftframe, rightframe, tracker, label, pos):
+def trackbetweenframes(id, leftframe, rightframe, tracker, trackid, tracks):
+    leftframe = int(leftframe)
+    rightframe = int(rightframe)
+    trackid = int(trackid)
+    job = session.query(Job).get(id)
+    segment = job.segment
+    video = segment.video
+    paths = [path for path in readpaths(tracks) if path is not None]
+    paths = trackutils.totrackpaths(paths)
+
+    logger.info("Job Id: {0}".format(id))
+    logger.info("Algorithm: {0}".format(tracker))
+    
+    outpath = tracking.api.bidirectional(tracker, leftframe, rightframe, video.location, trackid, paths)
+    path = trackutils.fromtrackpath(outpath, job, leftframe, rightframe)
+    attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
+
+    logger.info("Path: {0}".format(path))
+
+    return {
+        "label": 0,
+        "boxes": [tuple(x) for x in path.getboxes()],
+        "attributes": attrs
+    }
+
+
+
+
+
     leftpos, rightpos = pos
     lxtl, lytl, lxbr, lybr, loccluded, loutside, lgenerated = leftpos
     rxtl, rytl, rxbr, rybr, roccluded, routside, rgenerated = rightpos

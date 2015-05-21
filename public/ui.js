@@ -13,13 +13,13 @@ function ui_build(job)
     }
     var tracks = new TrackCollection(player, planeview, job);
     var autotracker = new AutoTracker(job, tracks);
-    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), $("#copypastecontainer"), videoframe, job, player, tracks, shortcut, autotracker);
+    var objectui = new TrackObjectUI($("#newobjectbutton"), $("#objectcontainer"), $("#copypastecontainer"), videoframe, job, player, tracks, shortcut);
 
     if (planeview) {
         planeview.initializetracks(tracks);
     }
 
-    ui_setupbuttons(job, player, tracks, autotracker);
+    ui_setupbuttons(job, player, tracks);
     ui_setupslider(player);
     ui_setupsubmit(job, tracks);
     ui_setupclear(objectui);
@@ -195,7 +195,7 @@ function ui_setup(job)
     return screen;
 }
 
-function ui_setupbuttons(job, player, tracks, autotracker)
+function ui_setupbuttons(job, player, tracks)
 {
     $("#instructionsbutton").click(function() {
         player.pause();
@@ -293,7 +293,7 @@ function ui_setupbuttons(job, player, tracks, autotracker)
 
     $("#trackingoptionsautotrack").button().click(function() {
         var autotrack = $(this).attr("checked") ? true : false;
-        tracks.autotrack = autotrack;
+        tracks.setautotrack(autotrack);
 
         if (autotrack)
         {
@@ -309,9 +309,9 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         var value = $("#forwardtrackingselect").val();
         console.log("Forward tracker: " + value);
         if (value === "none") {
-            autotracker.forwardtracker = null;
+            tracks.setforwardtracker(null);
         } else {
-            autotracker.forwardtracker = value;
+            tracks.setforwardtracker(value);
         }
     };
     forwardtrackingselected();
@@ -321,22 +321,15 @@ function ui_setupbuttons(job, player, tracks, autotracker)
         var value = $("#bidirectionaltrackingselect").val();
         console.log("Bidirectional tracker: " + value);
         if (value === "none") {
-            autotracker.bidirectionaltracker = null;
+            tracks.setbidirectionaltracker(null);
         } else {
-            autotracker.bidirectionaltracker = value;
+            tracks.setbidirectionaltracker(value);
         }
     };
     bidirectionaltrackingselected();
 
     $("#bidirectionaltrackingselect").change(bidirectionaltrackingselected);
 
-    $("#trackingalgorithm").buttonset();
-    $("input[name='trackingalgorithm']").click(function() {
-        autotracker.algorithm = $(this).val()
-        console.log("Changed algorighm to: " + autotracker.algorithm);
-        eventlog("trackingalgorithm", "FPS = " + autotracker.algorithm);
-    });
- 
     if (!job.pointmode) {
         $("#annotateoptionsresize").button().click(function() {
             var resizable = $(this).attr("checked") ? false : true;

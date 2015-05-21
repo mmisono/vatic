@@ -89,10 +89,13 @@ def totrackpaths(paths):
         )
     return convertedpaths
 
-def fromtrackpath(path, job):
+def fromtrackpath(path, job, start, stop):
     newpath = Path(job = job)
     for box in path.boxes.values():
-        newpath.boxes.append(tovaticbox(newpath, box))
+        f = box.frame
+        blowradius = job.segment.video.blowradius
+        if f != start and f != stop and f % (blowradius + 1) == 0:
+            newpath.boxes.append(tovaticbox(newpath, box))
     return newpath
 
 def tovaticbox(path, box):
