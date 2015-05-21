@@ -296,37 +296,6 @@ def trackbetweenframes(id, leftframe, rightframe, tracker, trackid, tracks):
     }
 
 
-
-
-
-    leftpos, rightpos = pos
-    lxtl, lytl, lxbr, lybr, loccluded, loutside, lgenerated = leftpos
-    rxtl, rytl, rxbr, rybr, roccluded, routside, rgenerated = rightpos
-    leftframe = int(leftframe)
-    rightframe = int(rightframe)
-    labeltext = session.query(Label).get(label).text
-
-    logger.info("Track from {0} to {1}".format(leftframe, rightframe))
-    logger.info("Job Id: {0}".format(id))
-    logger.info("Algorithm: {0}".format(tracker))
-
-    job = session.query(Job).get(id)
-    segment = job.segment
-    video = segment.video
-
-    initialrect = (lxtl, lytl, lxbr-lxtl, lybr-lytl)
-    finalrect = (rxtl, rytl, rxbr-rxtl, rybr-rytl)
-    tracks = tracking.runbidirectionaltracker(tracker, labeltext, leftframe, rightframe, video.location, initialrect, finalrect)
-    path = convert_track_to_path(leftframe, tracks, job)
-    attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
-
-    return {
-        "label": 0,
-        "boxes": [tuple(x) for x in path.getboxes()],
-        "attributes": attrs
-    }
-
-
 """ ADMIN PAGE """
 @handler()
 def getallvideos():

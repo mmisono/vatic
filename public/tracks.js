@@ -1105,6 +1105,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         this.fixposition();
         this.recordposition();
         this.notifyupdate();
+        if (this.autotrack) this.autotrackcombo(function() {});
     }
 
     this.resizable = function(value)
