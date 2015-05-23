@@ -245,11 +245,9 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     }
 
     this.savedefaults = function() {
-        if (!this.job.pointmode) {
-            if (!this.job.pointmode) this.drawer.oneclick = $("#usedefaultsize").attr('checked');
-            this.drawer.defaultsize["width"] = $('#defaultwidth').slider("option", "value");
-            this.drawer.defaultsize["height"] = $('#defaultheight').slider("option", "value");
-        }
+        if (!this.job.pointmode) this.drawer.oneclick = $("#usedefaultsize").attr('checked');
+        this.drawer.defaultsize["width"] = $('#defaultwidth').slider("option", "value");
+        this.drawer.defaultsize["height"] = $('#defaultheight').slider("option", "value");
 
         this.defaultclass = $("input[name=classification]:checked").val();
         if (this.defaultclass == "none") {
