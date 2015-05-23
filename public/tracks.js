@@ -805,7 +805,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     this.setdone = function(value)
     {
         this.done = value;
-        this.setlocked(this.done);
+        this.setlock(this.done);
         if (this.done) {
             this.handle.addClass("boundingboxdone");
         } else {
@@ -1199,7 +1199,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         {
             return "";
         }
-        var str = "[" + this.label + "," + this.id + "," + this.journal.serialize() + ",{";
+        var str = "[" + this.label + "," + this.id + "," + this.done + "," + this.journal.serialize() + ",{";
 
         var length = 0;
         for (var i in this.attributejournals)

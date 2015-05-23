@@ -525,6 +525,7 @@ function ui_loadprevious(job, objectui)
         {
             objectui.injectnewobject(data[i]["label"],
                                      data[i]["userid"],
+                                     data[i]["done"],
                                      data[i]["boxes"],
                                      data[i]["attributes"]);
         }

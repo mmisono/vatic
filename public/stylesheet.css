@@ -329,6 +329,17 @@ canvas
     margin-left : 30px;
 }
 
+#doneheader
+{
+    padding : 3px !important;
+    cursor : pointer;
+}
+
+#doneheader:hover
+{
+    text-decoration : underline;
+}
+
 .trackobjectheader
 {
     margin : 0;

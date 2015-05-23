@@ -217,6 +217,7 @@ class Path(turkic.database.Base):
     labelid = Column(Integer, ForeignKey(Label.id))
     label = relationship(Label, cascade = "none", backref = "paths")
     userid = Column(Integer, default=0)
+    done = Column(Boolean, default = False)
 
     interpolatecache = None
 

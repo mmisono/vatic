@@ -81,13 +81,15 @@ def getboxesforjob(id):
         attrs = [(x.attributeid, x.frame, x.value) for x in path.attributes]
         result.append({"label": path.labelid,
                        "userid": path.userid,
+                       "done": path.done,
                        "boxes": [tuple(x) for x in path.getboxes()],
                        "attributes": attrs})
     return result
 
-def readpath(label, userid, track, attributes):
+def readpath(label, userid, done, track, attributes):
     path = Path()
     path.label = session.query(Label).get(label)
+    path.done = int(done)
     path.userid = int(userid)
  
     logger.debug("Received a {0} track".format(path.label.text))
@@ -130,7 +132,7 @@ def readpath(label, userid, track, attributes):
 def readpaths(tracks):
     paths = []
     logger.debug("Reading {0} total tracks".format(len(tracks)))
-    return [readpath(label, userid, track, attributes) for label, userid, track, attributes in tracks]
+    return [readpath(label, userid, done, track, attributes) for label, userid, done, track, attributes in tracks]
 
 @handler(post = "json")
 def savejob(id, tracks):

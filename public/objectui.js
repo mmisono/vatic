@@ -137,9 +137,9 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     this.tracks = tracks;
     this.shortcuts = shortcuts;
 
-    this.unlockedcontainer = null;
-    this.lockedcontainer = null;
-    this.showinglocked = true;
+    this.activecontainer = null;
+    this.donecontainer = null;
+    this.showingdone = false;
 
     this.copypastehandler = new CopyPasteHandler(copypastecontainer, this.job);
     this.trackeditor = new TrackEditor(this.shortcuts, this.videoframe);
@@ -296,6 +296,28 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
                 me.selectobject(object);
             }
         });
+
+        object.ondone.push(function(obj) {
+            if (obj.track.done && !me.showingdone) {
+                me.doneheader.show();
+                me.showingdone = true;
+                me.donecontainer.slideDown();
+            } else {
+                var hasdone = false;
+                for (var i in me.objects)
+                {
+                    if (me.objects[i].track.done) {
+                        hasdone = true;
+                        break;
+                    }
+                    if (!hasdone) {
+                        me.doneheader.hide();
+                        me.showingdone = false;
+                        me.donecontainer.slideUp();
+                    }
+                }
+            }
+        });
     }
 
     this.startnewobject = function()
@@ -322,8 +344,8 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
         this.currentobject = new TrackObject(this.job,
                                              this.player,
-                                             this.unlockedcontainer,
-                                             this.lockedcontainer,
+                                             this.activecontainer,
+                                             this.donecontainer,
                                              this.currentcolor,
                                              this.copypastehandler,
                                              this.defaultclass);
@@ -380,7 +402,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         this.counter++;
     }
 
-    this.injectnewobject = function(label, id, path, attributes)
+    this.injectnewobject = function(label, id, done, path, attributes)
     {
         console.log("Injecting existing object");
 
@@ -389,8 +411,8 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         this.currentcolor = this.pickcolor();
         var obj = new TrackObject(this.job,
                                   this.player,
-                                  this.unlockedcontainer,
-                                  this.lockedcontainer,
+                                  this.activecontainer,
+                                  this.donecontainer,
                                   this.currentcolor,
                                   this.copypastehandler,
                                   this.defaultclass);
@@ -404,7 +426,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         track.journal.artificialright = track.journal.rightmost();
 
         obj.initialize(id, track, this.tracks);
-        obj.finalize(label, false);
+        obj.finalize(label, done);
 
         for (var i = 0; i < attributes.length; i++)
         {
@@ -423,22 +445,25 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
     this.setup = function()
     {
-        this.unlockedcontainer = $("<div id='objectcontainerunlocked'></div>")
+        this.activecontainer = $("<div id='objectcontaineractive'></div>")
             .appendTo(this.container);
-        this.lockedheader = $("<div id='lockedheader'>Locked:</div>")
+        this.doneheader = $("<div id='doneheader'><strong>Done: </strong></p>")
             .appendTo(this.container);
-        this.lockedcontainer = $("<div id='objectcontainerlocked'></div>")
+        this.donecontainer = $("<div id='objectcontainerdone'></div>")
             .appendTo(this.container);
 
-        this.lockedheader.click(function() {
-            if (me.showinglocked) {
-                me.showinglocked = false;
-                me.lockedcontainer.slideUp();
+        this.doneheader.click(function() {
+            if (me.showingdone) {
+                me.showingdone = false;
+                me.donecontainer.slideUp();
             } else {
-                me.showinglocked = true;
-                me.lockedcontainer.slideDown();
+                me.showingdone = true;
+                me.donecontainer.slideDown();
             }
         });
+ 
+        this.donecontainer.hide();
+        this.doneheader.hide();
 
         this.button.button({
             icons: {
@@ -506,14 +531,14 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     }
 }
 
-function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, copypastehandler, defaultclass)
+function TrackObject(job, player, activecontainer, donecontainer, color, copypastehandler, defaultclass)
 {
     var me = this;
 
     this.job = job;
     this.player = player;
-    this.unlockedcontainer = unlockedcontainer;
-    this.lockedcontainer = lockedcontainer;
+    this.activecontainer = activecontainer;
+    this.donecontainer = donecontainer;
     this.color = color;
     this.copypastehandler = copypastehandler;
     this.defaultclass = defaultclass;
@@ -527,9 +552,10 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
     this.onfolddown = [];
     this.onfoldup = [];
     this.onselected = [];
+    this.ondone = [];
 
     this.handle = $("<div class='trackobject'><div>");
-    this.handle.prependTo(this.unlockedcontainer);
+    this.handle.prependTo(this.activecontainer);
     this.handle.css({
         'background-color': color[2],
         'border-color': color[2]});
@@ -554,7 +580,6 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
     this.tooltiptimer = null;
 
     this.objectselected = null;
-    this.locked = false;
 
     this.initialize = function(id, track, tracks)
     {
@@ -589,8 +614,8 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
 
         this.track.oninteract.push(function() {
             me.click();
-           // var pos = me.handle.position().top + me.container.scrollTop() - 30;
-            pos = pos - me.handle.height();
+            //var pos = me.handle.position().top + me.container.scrollTop() - 30;
+            //pos = pos - me.handle.height();
             //me.container.stop().animate({scrollTop: pos}, 750);
 
             me.toggletooltip();
@@ -678,12 +703,12 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
 
         if (length == 1)
         {
-            this.finalize(firsti, true);
+            this.finalize(firsti, false);
             this.statefolddown();
         }
         else if (this.defaultclass)
         {
-            this.finalize(this.defaultclass, true);
+            this.finalize(this.defaultclass, false);
             this.statefolddown();
         }
         else
@@ -692,7 +717,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
                 this.handle, 
                 "What type of object did you just annotate?",
                 function(i) {
-                    me.finalize(i, true);
+                    me.finalize(i, false);
                     me.statefolddown();
                 
                 });
@@ -716,10 +741,11 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
         this.header.html("<strong>" + this.job.labels[this.label] + " " + (this.id) + "</strong>");
     }
     
-    this.finalize = function(labelid, track)
+    this.finalize = function(labelid, done)
     {
         this.label = labelid;
         this.track.label = labelid;
+        this.track.done = done;
 
         this.headerdetails = $("<div style='float:right;'></div>").appendTo(this.handle);
         this.header = $("<p class='trackobjectheader'>").appendTo(this.handle);
@@ -760,7 +786,8 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
             me.updateboxtext();
         });
 
-        if (track) this.track.runautotracker(function(){});
+        if (this.track.done) this.setdone(this.track.done);
+        if (this.track.autotrack) this.track.runautotracker(function(){});
     }
 
     this.updateboxtext = function()
@@ -906,8 +933,8 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
 
         //this.details.append("<br><input type='button' id='trackobject" + this.id + "label' value='Change Type'>");
         this.headerdetails.append("<div style='float:right;'><div class='ui-icon ui-icon-trash' id='trackobject" + this.id + "delete' title='Delete this track'></div></div>");
-        this.headerdetails.append("<div style='float:right;'><div class='ui-icon ui-icon-unlocked' id='trackobject" + this.id + "lock' title='Lock/unlock to prevent modifications'></div></div>");
         this.headerdetails.append("<div style='float:right;'><div class='ui-icon ui-icon-image' id='trackobject" + this.id + "tooltip' title='Show preview of track'></div></div>");
+        this.headerdetails.append("<div style='float:right;'><div class='ui-icon ui-icon-check' id='trackobject" + this.id + "lock' title='Mark track as done'></div></div>");
 
         $("#trackobject" + this.id + "delete").click(function() {
             if (window.confirm("Delete the " + me.job.labels[me.label] + " " + (me.id + 1) + " track? If the object just left the view screen, click the \"Outside of view frame\" check box instead."))
@@ -918,7 +945,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
         });
 
         $("#trackobject" + this.id + "lock").click(function() {
-            me.togglelocked($(this));
+            me.setdone(!me.track.done);
         });
 
         $("#trackobject" + this.id + "tooltip").click(function() {
@@ -928,32 +955,31 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
         });
     }
 
-    this.togglelocked = function(lockbutton)
+    this.setdone = function(value)
     {
-            if (this.locked)
-            {
-                this.locked = false;
-                this.track.setlock(false);
-                this.track.setdone(false);
-                this.updatebackground();
-                lockbutton.addClass("ui-icon-unlocked").removeClass("ui-icon-locked");
-                this.handle.slideUp(null, function() {
-                    me.handle.appendTo(me.unlockedcontainer);
-                    me.handle.slideDown();
-                });
-            }
-            else
-            {
-                this.locked = true;
-                this.track.setlock(true);
-                this.track.setdone(false);
-                this.updatebackground();
-                lockbutton.removeClass("ui-icon-unlocked").addClass("ui-icon-locked");
-                this.handle.slideUp(null, function() {
-                    me.handle.appendTo(me.lockedcontainer);
-                    me.handle.slideDown();
-                });
-            }     
+        var donebutton = $("#trackobject" + this.id + "lock");
+        this.track.setdone(value);
+        this.updatebackground();
+        if (value)
+        {
+            this.handle.slideUp(null, function() {
+                donebutton.addClass("ui-icon-pencil").removeClass("ui-icon-check");
+                donebutton.attr('title', 'Continue to edit track');
+                me.handle.appendTo(me.donecontainer);
+                me.handle.slideDown();
+                me._callback(me.ondone);
+            });
+        }
+        else
+        {
+            this.handle.slideUp(null, function() {
+                donebutton.removeClass("ui-icon-pencil").addClass("ui-icon-check");
+                donebutton.attr('title', 'Mark track as done');
+                me.handle.appendTo(me.activecontainer);
+                me.handle.slideDown();
+                me._callback(me.ondone);
+            });
+        }
     }
 
     this.updatecheckboxes = function()
@@ -1203,7 +1229,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
     }
 
     this.updatebackground = function() {
-        if (this.locked) {
+        if (this.track.done) {
             this.inactive();
         } else if (this.objectselected == null) {
             this.normal();
@@ -1217,7 +1243,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
     this.setobjectselected = function(object) {
         this.objectselected = object;
         this.updatebackground();
-        if (this.locked) return;
+        if (this.track.done) return;
         if (object == null || object == this) {
             this.track.setlock(false);
         } else {
@@ -1227,7 +1253,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
 
     this.mouseover = function()
     {
-        if (this.objectselected || this.locked) return;
+        if (this.objectselected || (this.track && this.track.done)) return;
         this.highlight();
 
         if (this.track)
@@ -1245,7 +1271,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
  
     this.mouseout = function()
     {
-        if (this.objectselected || this.locked) return;
+        if (this.objectselected || (this.track && this.track.done)) return;
         this.normal();
 
         if (this.track)
@@ -1286,7 +1312,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
 
     this.click = function()
     {
-        if (this.ready && !this.locked)
+        if (this.ready && !this.track.done)
         {
             this._callback(this.onselected);
         }
