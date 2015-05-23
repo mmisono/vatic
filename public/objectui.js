@@ -198,11 +198,15 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
  
         testbox.appendTo(sizeeditor);
 
-        if (this.drawer.oneclick) {
+        if (this.drawer.oneclick || this.job.pointmode) {
             $("#usedefaultsize").attr('checked', 'checked');
         } else {
             sizeeditor.hide();
-        }    
+        }
+
+        if (this.job.pointmode) {
+            $("#usedefaultsize").attr("disabled", true);
+        }
 
         $("#usedefaultsize").change(function() {
             if ($(this).is(":checked")) {
@@ -237,9 +241,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
     this.defaultsdialog = function(container) {
         this.editdefaultclass(container);
-        if (!this.job.pointmode) {
-            this.defaultsize(container);
-        }
+        this.defaultsize(container);
     }
 
     this.savedefaults = function() {
