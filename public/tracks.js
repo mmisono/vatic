@@ -827,6 +827,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         if (value)
         {
             this.handle.addClass("boundingboxlocked");
+            this.highlight(false);
         }
         else
         {
@@ -1020,7 +1021,10 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
             });
 
             this.handle.click(function() {
-                me.recordposition();
+                if (!me.locked && !me.drawingnew)
+                {
+                    me.recordposition();
+                }
                 me.triggerinteract();
             });
 
@@ -1072,7 +1076,8 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
 
     this.triggerinteract = function() 
     {
-        if (!this.locked && !this.drawingnew)
+        // We should still trigger when locked. Not when drawing new
+        if (!this.drawingnew)
         {
             for (var i in this.oninteract)
             {
@@ -1102,11 +1107,14 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
 
     this.moveboundingbox = function(position)
     {
-        this.handleposition(position);
-        this.fixposition();
-        this.recordposition();
-        this.notifyupdate();
-        if (this.autotrack) this.runautotracker(function() {});
+        if (!this.locked && !this.drawingnew)
+        {
+            this.handleposition(position);
+            this.fixposition();
+            this.recordposition();
+            this.notifyupdate();
+            if (this.autotrack) this.runautotracker(function() {});
+        }
     }
 
     this.resizable = function(value)
@@ -1317,7 +1325,6 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     }
 
     this.cleanuptracking = function() {
-        me.setlock(false);
         me.notifydonetracking();
         me.notifyupdate();
     }
