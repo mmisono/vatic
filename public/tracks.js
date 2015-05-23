@@ -490,8 +490,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     this.forwardtracker = forwardtracker;
     this.bidirectionaltracker = bidirectionaltracker;
     this.autotrack = autotrack;
-    this.forwardrequest = null;
-    this.backrequest = null;
+    this.autotrackmanager = new AutoTrackManager(this.tracks, this, this.forwardtracker, this.bidirectionaltracker);
 
     this.onmouseover = [];
     this.onmouseout = [];
@@ -988,6 +987,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
                     me.fixposition();
                     me.recordposition();
                     me.notifyupdate();
+                    if (me.autotrack) me.autotrackmanager.addkeyframe()
                     eventlog("resizable", "Resize a box");
                     me.highlight(false);
                 },
@@ -1006,7 +1006,8 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
                     me.fixposition();
                     me.recordposition();
                     me.notifyupdate();
-                    if (me.autotrack) me.runautotracker(function() {});
+                    if (me.autotrack) me.autotrackmanager.addkeyframe()
+    
                     eventlog("draggable", "Drag-n-drop a box");
                 },
                 cancel: ".boundingboxtext"
@@ -1125,7 +1126,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
             this.fixposition();
             this.recordposition();
             this.notifyupdate();
-            if (this.autotrack) this.runautotracker(function() {});
+            if (me.autotrack) me.autotrackmanager.addkeyframe()
         }
     }
 
@@ -1289,8 +1290,8 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         this.notifyupdate();
     }
 
-    this.cleartopreviouskeyframe = function(frame) {
-        this.journal.cleartopreviouskeyframe(frame);
+    this.cleartoprevkeyframe = function(frame) {
+        this.journal.cleartoprevkeyframe(frame);
         this.journal.artificialright = this.journal.rightmost();
         this.notifyupdate();
     }
@@ -1341,8 +1342,8 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         me.notifyupdate();
     }
 
-    this.previouskeyframe = function(frame) {
-        var prev = this.journal.previouskeyframe(frame);
+    this.prevkeyframe = function(frame) {
+        var prev = this.journal.prevkeyframe(frame);
         if (prev['pos'] == null) return null;
         return prev['frame'];
     }
@@ -1354,86 +1355,190 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     }
 
     this.istracking = function() {
-        return this.forwardrequest || this.backrequest;
+        return this.autotrackmanager.istracking();
     }
 
-    this.abortrequests = function() {
-        if (this.forwardrequest) this.forwardrequest.abort();
-        if (this.backrequest) this.backrequest.abort();
-    }
-
-    this.runautotracker = function(callback) {
-        var callcount = 0;
-        function c() {
-            if (callcount == 1) callback()
-            else callcount++;
-        }
-
-        this.abortrequests();
-        this.recordposition();
-
-        var frame = this.player.frame;
-
-        var prev = this.previouskeyframe(frame);
-        if (prev == null) {
-            c();
-        } else {
-            this.cleartopreviouskeyframe(frame);
-            this.bidirectionaltrackrequest(prev, frame, c);
-        }
-
-        var next = this.nextkeyframe(frame);
-        if (next == null) {
-            this.cleartoend(frame);
-            this.forwardautotrackrequest(frame, c);
-        } else {
-            this.cleartonextkeyframe(frame);
-            this.bidirectionaltrackrequest(frame, next, c);
-        }
-
-        this.notifystarttracking();
-    }
-
-    this.autotrackrequest = function(args, api, start, stop, callback) {
-        return server_post(api, args, this.tracks.serialize(), function(data) {
-            me.recordtrackdata(data, start, stop);
-            me.cleanuptracking();
-            me.currentrequest = null;
-            callback();
-            console.log("Successful tracked object");
-        });
-    }
-
-    this.forwardautotrackrequest = function(frame, callback) {
-        if (this.forwardtracker) {
-            var args = [this.player.job.jobid, frame, this.forwardtracker, this.id];
-            this.forwardrequest = this.autotrackrequest(args, "trackforward", frame, null,
-                function() {
-                    me.forwardrequest = null;
-                    callback();
-                });
-        } else {
-            alert("Please select a forward tracking algorithm");
-            callback();
-        }
-    }
-
-    this.bidirectionaltrackrequest = function(frame1, frame2, callback) {
-        if (this.bidirectionaltracker == null) {
-            alert("Please select a bidirectional tracking algorithm");
-            callback();
-            return;
-        }
-
-        var args = [this.player.job.jobid, frame1, frame2, this.bidirectionaltracker, this.id];
-        this.backrequest = this.autotrackrequest(args, "trackbetweenframes", frame1, frame2,
-            function() {
-                me.backrequest = null;
-                callback();
-            });
-    }
 
     this.draw(this.player.frame);
+}
+
+function AutoTrackManager(tracks, track, forwardtracker, bidirectionaltracker)
+{
+    var me = this;
+
+    this.mintrackframes = 10;
+    this.waittime = 2000;
+    this.tracks = tracks;
+    this.track = track;
+    this.forwardtracker = forwardtracker;
+    this.bidirectionaltracker = bidirectionaltracker;
+    this.intervals = []; // Each entry is a dictionary with keys: time, request, interval, callback
+
+    this.istracking = function() {
+        return this.intervals.length != 0;
+    }
+
+    // Callback on completing of request
+    this.requestcomplete = function(interval, data) {
+        console.log("TRACKING: Completed tracking between " + interval["start"] + " and " + interval["end"]);
+        var start = interval["start"] != null ? interval["start"] + 1 : null;
+        var end = interval["end"] != null ? interval["end"] - 1 : null;
+        this.track.clearbetweenframes(start, end);
+        this.track.recordtrackdata(data, start, end);
+        this.track.cleanuptracking();
+        if (interval["callback"]) interval["callback"]();
+
+        // Remove from list of intervals
+        var i = this.intervals.indexOf(interval);
+        if (i >= 0) {
+            this.intervals.splice(i, 1);
+        }
+    }
+
+    this.makerequest = function(interval) {
+        var now = new Date();
+        if (interval["end"] - interval["start"] < this.mininterval) {
+            // Smaller than min interval so we will just interpolate
+            console.log("TRACKING: Linear interpolation between " + interval["start"] + " and " + interval["end"]);
+            this.requestcomplete(interval, null);
+        } else if ((now.getTime() - interval["time"].getTime()) > this.waittime) {
+            // Wait time has passed
+            console.log("TRACKING: Making request in " + interval["start"] + " and " + interval["end"]);
+            var api = "";
+            var args = [];
+            if (interval["end"] == null) {
+                // Use the online trackers
+                if (this.forwardtracker == null) {
+                    this.requestcomplete(interval, null);
+                    return;
+                }
+                api = "trackforward";
+                args = [this.track.player.job.jobid, interval["start"],
+                    this.forwardtracker, this.track.id];
+            } else {
+                // Use the bidirectional trackers
+                if (this.bidirectionaltracker == null) {
+                    this.requestcomplete(interval, null);
+                    return;
+                }
+                api = "trackbetweenframes";
+                args = [this.track.player.job.jobid, interval["start"],
+                    interval["end"], this.bidirectionaltracker, this.track.id];
+            }
+
+            // Execute the request
+            this.track.notifystarttracking();
+            interval["request"] = server_post(
+                api,
+                args,
+                this.tracks.serialize(),
+                function(data) {me.requestcomplete(interval, data);}
+            );
+        } else {
+            // Request time has not passed
+            // This happens because the interval was altered in between
+            // the time it was initially requested and now
+            console.log("TRACKING: Rescheduling request in [" + 
+                interval["start"] + ", " + 
+                interval["end"] + "]"
+            );
+            this.schedulerequest(interval);
+        }
+    }
+
+    // We will track this interval in the future
+    this.schedulerequest = function(interval) {
+        setTimeout(function() {
+            me.makerequest(interval);
+        }, this.waittime + 10);
+    }
+
+    // Use a new key frame for tracking
+    this.addkeyframe = function(callback)
+    {
+        var frame = this.track.player.frame;
+        this.track.recordposition();
+        var added = false;
+
+        // Check if the key frame falls in any of the requested intervals
+        for (var i in this.intervals) {
+            if (this.intervals[i]["start"] < frame && 
+                    (frame < this.intervals[i]["end"] || this.intervals[i]["end"] == null)) {
+                // It falls in the interval
+                added = true;
+                console.log("TRACKING: Splitting interval");
+
+                // Split this interval into two interval
+                // Modify the current one so it ends at the new frame
+                var previnterval = this.intervals[i];
+                var oldend = previnterval["end"];
+                previnterval["time"] = new Date();
+                previnterval["end"] = frame;
+                previnterval["callback"] = callback;
+                // If we already issued the request abort it and reissue
+                if (previnterval["request"]) {
+                    previnterval["request"].abort();
+                    this.schedulerequest(previnterval);
+                }
+
+                // Add a new interval beginning at the new frame
+                var nextinterval = {
+                    "time": new Date(),
+                    "start": frame,
+                    "end": oldend,
+                    "request": null,
+                    "callback": callback
+                };
+                // Issue the request
+                this.intervals.push(nextinterval);
+                this.schedulerequest(nextinterval);
+            } else if (this.intervals[i]["start"] == frame || this.intervals[i]["end"] == frame) {
+                // New frame falls on the edge of an interval
+                added = true;
+                var previnterval = this.intervals[i];
+                previnterval["time"] = new Date();
+                previnterval["callback"] = callback;
+
+                // If we already issued the request abort it and reissue
+                if (previnterval["request"]) {
+                    previnterval["request"].abort();
+                    this.schedulerequest(previnterval);
+                }
+            }
+        }
+
+        if (!added) {
+            // The new frame did not fall into any of the intervals
+            // Create two new requests
+            var prev = this.track.prevkeyframe(frame);
+            var next = this.track.nextkeyframe(frame);
+
+            // Intervals must have a start
+            if (prev != null) {
+                var previnterval = {
+                    "time": new Date(),
+                    "start": prev,
+                    "end": frame,
+                    "request": null,
+                    "callback": callback
+                };
+                this.intervals.push(previnterval);
+                this.schedulerequest(previnterval);
+            }
+
+            // Last frame may be null meaning we should track
+            // to the end of the video
+            var nextinterval = {
+                "time": new Date(),
+                "start": frame,
+                "end": next,
+                "request": null,
+                "callback": callback
+            };
+            this.intervals.push(nextinterval);
+            this.schedulerequest(nextinterval);
+        }
+    }
 }
 
 /*
@@ -1461,6 +1566,11 @@ function Journal(start, blowradius)
             if (Math.abs(i - frame) >= this.blowradius)
             {
                 newannotations[i] = this.annotations[i];
+            }
+            else if (position.generated)
+            {
+                console.log("Did not mark to avoid overwriting key frames");
+                return;
             }
             else if (i == this.start)
             {
@@ -1500,7 +1610,7 @@ function Journal(start, blowradius)
                 'pos': next};
     }
 
-    this.previouskeyframe = function(frame) {
+    this.prevkeyframe = function(frame) {
         var previous = null;
         var previoustime = 0;
 
@@ -1532,12 +1642,12 @@ function Journal(start, blowradius)
         }
     }
 
-    this.cleartopreviouskeyframe = function(frame) {
-        var previouskeyframe = this.previouskeyframe(frame);
-        if (previouskeyframe['pos'] == null) {
+    this.cleartoprevkeyframe = function(frame) {
+        var prevkeyframe = this.prevkeyframe(frame);
+        if (prevkeyframe['pos'] == null) {
             this.cleartobeginning(frame);
         } else {
-            this.clearbetweenframes(previouskeyframe['frame'], frame);
+            this.clearbetweenframes(prevkeyframe['frame'], frame);
         }
     }
 
@@ -1545,7 +1655,8 @@ function Journal(start, blowradius)
         clearframes = []
         for (t in this.annotations) {
             time = parseInt(t);
-            if (time > frame1 && time < frame2) clearframes.push(time);
+            if ((time > frame1 || frame1 == null) && (time < frame2 || frame2 == null)) 
+                clearframes.push(time);
         }
         for (t in clearframes) {
             delete this.annotations[clearframes[t]];
