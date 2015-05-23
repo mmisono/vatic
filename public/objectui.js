@@ -348,7 +348,8 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
                                              this.donecontainer,
                                              this.currentcolor,
                                              this.copypastehandler,
-                                             this.defaultclass);
+                                             this.defaultclass,
+                                             false);
         this.currentobject.statedraw();
 
         this.tracks.resizable(false);
@@ -415,7 +416,8 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
                                   this.donecontainer,
                                   this.currentcolor,
                                   this.copypastehandler,
-                                  this.defaultclass);
+                                  this.defaultclass,
+                                  true);
 
         var track = tracks.add(path[0][4], Position.fromdata(path[0]),
                                this.currentcolor[0]);
@@ -531,7 +533,7 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     }
 }
 
-function TrackObject(job, player, activecontainer, donecontainer, color, copypastehandler, defaultclass)
+function TrackObject(job, player, activecontainer, donecontainer, color, copypastehandler, defaultclass, loaded)
 {
     var me = this;
 
@@ -542,6 +544,7 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
     this.color = color;
     this.copypastehandler = copypastehandler;
     this.defaultclass = defaultclass;
+    this.loaded = loaded;
 
     this.id = null;
     this.track = null;
@@ -787,7 +790,7 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
         });
 
         if (this.track.done) this.setdone(this.track.done);
-        if (this.track.autotrack) this.track.runautotracker(function(){});
+        if (this.track.autotrack && !this.loaded) this.track.autotrackmanager.addkeyframe();
     }
 
     this.updateboxtext = function()

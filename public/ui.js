@@ -135,8 +135,8 @@ function ui_setup(job)
     }
 
     $("#trackingoptions").append(
-        "<input type='checkbox' id='trackingoptionsautotrack'>" +
-        "<label for='trackingoptionsautotrack'>Track at start</label>");
+        "<input type='checkbox' id='trackingoptionsautotrack' checked>" +
+        "<label for='trackingoptionsautotrack'>Autotrack</label>");
 
     $("<div class='button' id='openadvancedoptions'>Player Options</div>")
         .button({
@@ -304,6 +304,8 @@ function ui_setupbuttons(job, player, tracks)
             eventlog("disabletrackatstart", "Objects will not be tracked on creation");
         }
     });
+    var autotrack = $("#trackingoptionsautotrack").attr("checked") ? true : false;
+    tracks.setautotrack(autotrack);
 
     var forwardtrackingselected = function() {
         var value = $("#forwardtrackingselect").val();
