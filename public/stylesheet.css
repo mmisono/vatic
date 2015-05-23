@@ -423,6 +423,11 @@ canvas
     opacity : 0.3 !important; 
 }
 
+.boundingboxdone
+{
+    background-color: white;
+}
+
 .boundingboxlocked
 {
     z-index : 0;

@@ -934,6 +934,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
             {
                 this.locked = false;
                 this.track.setlock(false);
+                this.track.setdone(false);
                 this.updatebackground();
                 lockbutton.addClass("ui-icon-unlocked").removeClass("ui-icon-locked");
                 this.handle.slideUp(null, function() {
@@ -945,6 +946,7 @@ function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, cop
             {
                 this.locked = true;
                 this.track.setlock(true);
+                this.track.setdone(false);
                 this.updatebackground();
                 lockbutton.removeClass("ui-icon-unlocked").addClass("ui-icon-locked");
                 this.handle.slideUp(null, function() {

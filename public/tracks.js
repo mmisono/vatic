@@ -505,6 +505,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     this.canresize = true;
 
     this.locked = false;
+    this.done = false;
     this.drawingnew = false;
 
     this.journal.mark(this.player.job.start,
@@ -799,6 +800,17 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
             }
         }
 
+    }
+
+    this.setdone = function(value)
+    {
+        this.done = value;
+        this.setlocked(this.done);
+        if (this.done) {
+            this.handle.addClass("boundingboxdone");
+        } else {
+            this.handle.removeClass("boundingboxdone");
+        }
     }
 
     /*
