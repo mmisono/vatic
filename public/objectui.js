@@ -8,7 +8,11 @@ function TrackEditor(shortcuts, videoframe)
     this.enabled = false;
 
     this.enable = function() {
-        this.enabled = true;
+        if (!this.track || this.track.locked) {
+            this.enabled = false;
+        } else {
+            this.enabled = true;
+        }
     }
 
     this.disable = function() {
@@ -17,6 +21,11 @@ function TrackEditor(shortcuts, videoframe)
 
     this.settrack = function(track) {
         this.track = track;
+
+        if (!this.track || this.track.locked) {
+            this.enabled = false;
+        }
+
         this.videoframe.click(function(e) {
             if (!me.enabled) return;
             var offset = me.videoframe.offset();
@@ -36,7 +45,7 @@ function TrackEditor(shortcuts, videoframe)
     this.initializeshortucts = function() {
         // U decrease width
         this.shortcuts.addshortcut([85], function() {
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.xbr -= 1;
             pos.width -= 1;
@@ -45,7 +54,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // I increase width
         this.shortcuts.addshortcut([73], function() {
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.xbr += 1;
             pos.width += 1;
@@ -54,7 +63,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // O decrease height
         this.shortcuts.addshortcut([79], function() {
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.ybr -= 1;
             pos.height -= 1;
@@ -63,7 +72,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // P decrease height
         this.shortcuts.addshortcut([80], function() {
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.ybr += 1;
             pos.height += 1;
@@ -72,7 +81,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // Left arrow and H
         this.shortcuts.addshortcut([37, 72], function(){
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.xtl -= 1;
             pos.xbr -= 1;
@@ -81,7 +90,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // Up arrow and K
         this.shortcuts.addshortcut([38, 75], function(){
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.ytl -= 1;
             pos.ybr -= 1;
@@ -90,7 +99,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // Right arrow and L
         this.shortcuts.addshortcut([39, 76], function(){
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.xtl += 1;
             pos.xbr += 1;
@@ -99,7 +108,7 @@ function TrackEditor(shortcuts, videoframe)
 
         // Down arrow and J
         this.shortcuts.addshortcut([40, 74], function(){
-            if (!me.track) return;
+            if (!me.enabled) return;
             var pos = me.track.pollposition();
             pos.ytl += 1;
             pos.ybr += 1;
@@ -110,6 +119,12 @@ function TrackEditor(shortcuts, videoframe)
     this.initializeshortucts();
 }
 
+/*
+ * TrackObjectUI:
+ *   - object creation
+ *   - object selection
+ *   - new object defaults
+ */
 function TrackObjectUI(button, container, copypastecontainer, videoframe, job, player, tracks, shortcuts)
 {
     var me = this;
@@ -121,6 +136,10 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     this.player = player;
     this.tracks = tracks;
     this.shortcuts = shortcuts;
+
+    this.unlockedcontainer = null;
+    this.lockedcontainer = null;
+    this.showinglocked = true;
 
     this.copypastehandler = new CopyPasteHandler(copypastecontainer, this.job);
     this.trackeditor = new TrackEditor(this.shortcuts, this.videoframe);
@@ -243,27 +262,34 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
     this.deselectcurrentobject = function()
     {
+        // Update state of all objects
+        for (var i in this.objects)
+        {
+            this.objects[i].setobjectselected(null);
+        }
+
         this.selectedobject = null;
         this.trackeditor.disable();
-        for (var i in this.objects) {
-            this.objects[i].resetselected();
-        }
     }
 
     this.selectobject = function(object)
     {
         this.selectedobject = object;
+
+        // Update state of all objects
+        for (var i in this.objects)
+        {
+            this.objects[i].setobjectselected(this.selectedobject);
+        }
+
+        // Setup track editor
         this.trackeditor.settrack(this.selectedobject.track);
         this.trackeditor.enable();
-        for (var i in this.objects) {
-            this.objects[i].deactivate();
-        }
-        this.selectedobject.select();
     }
 
     this.setupnewobject = function(object)
     {
-        object.onclick.push(function() {
+        object.onselected.push(function() {
             if (me.selectedobject == object) {
                 me.deselectcurrentobject();
             } else {
@@ -294,8 +320,10 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
         this.button.button("option", "disabled", true);
 
-        this.currentobject = new TrackObject(this.job, this.player,
-                                             this.container,
+        this.currentobject = new TrackObject(this.job,
+                                             this.player,
+                                             this.unlockedcontainer,
+                                             this.lockedcontainer,
                                              this.currentcolor,
                                              this.copypastehandler,
                                              this.defaultclass);
@@ -359,8 +387,11 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
         //this.instructions.fadeOut();
 
         this.currentcolor = this.pickcolor();
-        var obj = new TrackObject(this.job, this.player,
-                                  container, this.currentcolor,
+        var obj = new TrackObject(this.job,
+                                  this.player,
+                                  this.unlockedcontainer,
+                                  this.lockedcontainer,
+                                  this.currentcolor,
                                   this.copypastehandler,
                                   this.defaultclass);
 
@@ -392,6 +423,23 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
 
     this.setup = function()
     {
+        this.unlockedcontainer = $("<div id='objectcontainerunlocked'></div>")
+            .appendTo(this.container);
+        this.lockedheader = $("<div id='lockedheader'>Locked:</div>")
+            .appendTo(this.container);
+        this.lockedcontainer = $("<div id='objectcontainerlocked'></div>")
+            .appendTo(this.container);
+
+        this.lockedheader.click(function() {
+            if (me.showinglocked) {
+                me.showinglocked = false;
+                me.lockedcontainer.slideUp();
+            } else {
+                me.showinglocked = true;
+                me.lockedcontainer.slideDown();
+            }
+        });
+
         this.button.button({
             icons: {
                 primary: "ui-icon-plusthick",
@@ -458,13 +506,14 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
     }
 }
 
-function TrackObject(job, player, container, color, copypastehandler, defaultclass)
+function TrackObject(job, player, unlockedcontainer, lockedcontainer, color, copypastehandler, defaultclass)
 {
     var me = this;
 
     this.job = job;
     this.player = player;
-    this.container = container;
+    this.unlockedcontainer = unlockedcontainer;
+    this.lockedcontainer = lockedcontainer;
     this.color = color;
     this.copypastehandler = copypastehandler;
     this.defaultclass = defaultclass;
@@ -477,10 +526,10 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
     this.onready = [];
     this.onfolddown = [];
     this.onfoldup = [];
-    this.onclick = [];
+    this.onselected = [];
 
     this.handle = $("<div class='trackobject'><div>");
-    this.handle.prependTo(container);
+    this.handle.prependTo(this.unlockedcontainer);
     this.handle.css({
         'background-color': color[2],
         'border-color': color[2]});
@@ -504,8 +553,8 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
     this.tooltip = null;
     this.tooltiptimer = null;
 
-    this.selected = false;
-    this.inactive = false;
+    this.objectselected = null;
+    this.locked = false;
 
     this.initialize = function(id, track, tracks)
     {
@@ -540,9 +589,9 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
 
         this.track.oninteract.push(function() {
             me.click();
-            var pos = me.handle.position().top + me.container.scrollTop() - 30;
+           // var pos = me.handle.position().top + me.container.scrollTop() - 30;
             pos = pos - me.handle.height();
-            me.container.stop().animate({scrollTop: pos}, 750);
+            //me.container.stop().animate({scrollTop: pos}, 750);
 
             me.toggletooltip();
         });
@@ -579,7 +628,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         this.drawinst = $("<div>" + html + "</div>").appendTo(this.handle);
         this.drawinst.hide().slideDown();
 
-        this.container.stop().animate({scrollTop: 0}, 750);
+        //this.container.stop().animate({scrollTop: 0}, 750);
 
     }
 
@@ -693,7 +742,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
             });
 
         this.details = $("<div class='trackobjectdetails'></div>").appendTo(this.handle).hide();
-                this.setupid();
+        this.setupid();
         this.setupdetails();
 
         this.updateboxtext();
@@ -869,16 +918,7 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         });
 
         $("#trackobject" + this.id + "lock").click(function() {
-            if (me.track.locked)
-            {
-                me.track.setlock(false);
-                $(this).addClass("ui-icon-unlocked").removeClass("ui-icon-locked");
-            }
-            else
-            {
-                me.track.setlock(true);
-                $(this).removeClass("ui-icon-unlocked").addClass("ui-icon-locked");
-            }
+            me.togglelocked($(this));
         });
 
         $("#trackobject" + this.id + "tooltip").click(function() {
@@ -886,6 +926,32 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         }).mouseout(function() {
             me.hidetooltip(); 
         });
+    }
+
+    this.togglelocked = function(lockbutton)
+    {
+            if (this.locked)
+            {
+                this.locked = false;
+                this.track.setlock(false);
+                this.updatebackground();
+                lockbutton.addClass("ui-icon-unlocked").removeClass("ui-icon-locked");
+                this.handle.slideUp(null, function() {
+                    me.handle.appendTo(me.unlockedcontainer);
+                    me.handle.slideDown();
+                });
+            }
+            else
+            {
+                this.locked = true;
+                this.track.setlock(true);
+                this.updatebackground();
+                lockbutton.removeClass("ui-icon-unlocked").addClass("ui-icon-locked");
+                this.handle.slideUp(null, function() {
+                    me.handle.appendTo(me.lockedcontainer);
+                    me.handle.slideDown();
+                });
+            }     
     }
 
     this.updatecheckboxes = function()
@@ -1134,9 +1200,32 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         //this.opencloseicon.addClass("ui-icon-triangle-1-s");
     }
 
+    this.updatebackground = function() {
+        if (this.locked) {
+            this.inactive();
+        } else if (this.objectselected == null) {
+            this.normal();
+        } else if (this.objectselected == this) {
+            this.highlight();
+        } else if (this.objectselected != null) {
+            this.inactive();
+        }
+    }
+
+    this.setobjectselected = function(object) {
+        this.objectselected = object;
+        this.updatebackground();
+        if (this.locked) return;
+        if (object == null || object == this) {
+            this.track.setlock(false);
+        } else {
+            this.track.setlock(true);
+        }
+    }
+
     this.mouseover = function()
     {
-        if (this.selected || this.inactive) return;
+        if (this.objectselected || this.locked) return;
         this.highlight();
 
         if (this.track)
@@ -1151,45 +1240,11 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
             this.opencloseicon.addClass("ui-icon-triangle-1-se");
         }
     }
-
-    this.deactivate = function()
-    {
-        this.selected = false;
-        this.inactive = true;
-
-        this.handle.css({
-            'background-color': me.color[1],
-        });
-    }
-
-    this.resetselected = function()
-    {
-        this.selected = false;
-        this.inactive = false;
-
-        this.unhighlight();
-    }
-
-    this.select = function()
-    {
-        this.selected = true;
-        this.handle.css({
-            'background-color': me.color[0],
-        });
-    }
-
-    this.highlight = function()
-    {
-        this.handle.css({
-            'border-color': me.color[0],
-            'background-color': me.color[1],
-        });
-    }
-
+ 
     this.mouseout = function()
     {
-        if (this.selected || this.inactive) return;
-        this.unhighlight();
+        if (this.objectselected || this.locked) return;
+        this.normal();
 
         if (this.track)
         {
@@ -1203,7 +1258,23 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
         }
     }
 
-    this.unhighlight = function()
+    this.inactive = function()
+    {
+        this.handle.css({
+            'background-color': me.color[1],
+            'border-color': me.color[1]
+        });
+    }
+
+    this.highlight = function()
+    {
+        this.handle.css({
+            'border-color': me.color[0],
+            'background-color': me.color[1],
+        });
+    }
+
+    this.normal = function()
     {
         this.handle.css({
             'border-color': me.color[2],
@@ -1213,9 +1284,9 @@ function TrackObject(job, player, container, color, copypastehandler, defaultcla
 
     this.click = function()
     {
-        if (this.ready)
+        if (this.ready && !this.locked)
         {
-            this._callback(this.onclick);
+            this._callback(this.onselected);
         }
     }
 

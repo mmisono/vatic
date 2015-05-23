@@ -101,6 +101,8 @@ function ui_setup(job)
 
     $("<div id='copypastecontainer'></div>").appendTo("#sidebar");
     $("<div id='objectcontainer'></div>").appendTo("#sidebar");
+    $("<div id='objectcontainerunlocked'></div>").appendTo("#objectcontainer");
+    $("<div id='objectcontainerlocked'></div>").appendTo("#objectcontainer");
 
     $("<div class='button' id='opentrackingoptions'>Tracking Options</div>")
         .button({
