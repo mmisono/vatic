@@ -1338,8 +1338,9 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     }
 
     this.cleanuptracking = function() {
-        me.notifydonetracking();
-        me.notifyupdate();
+        this.notifydonetracking();
+        this.notifyupdate();
+        this.draw(this.player.frame);
     }
 
     this.prevkeyframe = function(frame) {
@@ -1385,14 +1386,16 @@ function AutoTrackManager(tracks, track, forwardtracker, bidirectionaltracker)
         var end = interval["end"] != null ? interval["end"] - 1 : null;
         this.track.clearbetweenframes(start, end);
         this.track.recordtrackdata(data, start, end);
-        this.track.cleanuptracking();
-        if (interval["callback"]) interval["callback"]();
 
         // Remove from list of intervals
         var i = this.intervals.indexOf(interval);
         if (i >= 0) {
             this.intervals.splice(i, 1);
         }
+
+        // Notify that we are done
+        this.track.cleanuptracking();
+        if (interval["callback"]) interval["callback"]();
     }
 
     this.makerequest = function(interval) {
