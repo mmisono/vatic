@@ -70,7 +70,7 @@ function buildlist(container, data) {
 
         var segmenttable = $("<table />").appendTo(videoitem).addClass("videotable");
         var titlerow = $("<tr />").appendTo(segmenttable);
-        var titlecell = $("<th />").appendTo(titlerow).attr("colspan", 5);
+        var titlecell = $("<th />").appendTo(titlerow).attr("colspan", 6);
         titlecell.append(rowtitle);
 
         titlecell.append("<br />");
@@ -94,7 +94,8 @@ function buildlist(container, data) {
         headerrow.append("<th>Sequence</th>");
         headerrow.append("<th>Start Frame</th>");
         headerrow.append("<th>End Frame</th>");
-        headerrow.append("<th>Number of Objects</th>");
+        headerrow.append("<th>Tracks</th>");
+        headerrow.append("<th>Completed Tracks</th>");
         headerrow.append("<th>Link</th>");
 
         for (var j in video["segments"]) {
@@ -104,6 +105,7 @@ function buildlist(container, data) {
             segmentitem.append("<td>" + segment["start"] + "</td>");
             segmentitem.append("<td>" + segment["stop"] + "</td>");
             segmentitem.append("<td>" + segment["jobs"][0]["numobjects"] + "</td>");
+            segmentitem.append("<td>" + segment["jobs"][0]["numdone"] + "</td>");
             var linkcell = $("<td />").appendTo(segmentitem);
             $('<a>',{
                 text: segment["jobs"][0]["url"],

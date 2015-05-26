@@ -154,6 +154,8 @@ class Job(turkic.models.HIT):
     segment        = relationship(Segment,
                                   backref = backref("jobs",
                                                     cascade = "all,delete"))
+    #defaultlabelid = Column(Integer, ForeignKey(Label.id))
+    #defaultlabel = relationship(Label)
     istraining     = Column(Boolean, default = False)
 
     def getpage(self):

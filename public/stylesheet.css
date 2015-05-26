@@ -437,6 +437,8 @@ canvas
 .boundingboxdone
 {
     background-color: white;
+    opacity : 0.8 !important;
+    z-index : 0;
 }
 
 .boundingboxlocked

@@ -805,6 +805,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     {
         this.done = value;
         this.setlock(this.done);
+        this.handle.removeClass("boundingboxlocked");
         if (this.done) {
             this.handle.addClass("boundingboxdone");
         } else {
@@ -1359,7 +1360,6 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         return this.autotrackmanager.istracking();
     }
 
-
     this.draw(this.player.frame);
 }
 
@@ -1570,7 +1570,7 @@ function Journal(start, blowradius)
             {
                 newannotations[i] = this.annotations[i];
             }
-            else if (position.generated)
+            else if (position.generated && !this.annotations[i].generated)
             {
                 console.log("Did not mark to avoid overwriting key frames");
                 return;

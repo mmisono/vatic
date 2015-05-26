@@ -818,7 +818,12 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
 
         if ($("#annotateoptionshideboxtext").attr("checked"))
         {
-            $(".boundingboxtext").hide();
+            if (this.objectselected == this) {
+                this.track.handle.children(".boundingboxtext").show();
+            } else {
+                this.track.handle.children(".boundingboxtext").hide();
+                //$(".boundingboxtext").hide();
+            }
         }
     }
 

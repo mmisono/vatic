@@ -159,7 +159,7 @@ def savejob(id, tracks):
 
     # Create list of merged boxes with given label and userid
     labeledboxes = []
-    for boxes, paths in merge.merge(mergesegments):
+    for boxes, paths in merge.merge(mergesegments, threshold=0.8):
         path = paths[0]
         for p in paths:
             if p.job.segmentid == job.segmentid:
@@ -167,13 +167,13 @@ def savejob(id, tracks):
                 break
         labeledboxes.append((path.label, path.userid, boxes))
 
-    # Remove paths in neigboring segments
+    # Remove paths in neighboring segments
     for segment in updatesegments:
         for path in segment.paths:
             session.delete(path)
     session.commit()
 
-    # Add merged paths to neigboring segments
+    # Add merged paths to neighboring segments
     for label, userid, boxes in labeledboxes:
         frames = sorted([box.frame for box in boxes])
         for segment in updatesegments:
@@ -319,6 +319,7 @@ def getallvideos():
                 newsegment["jobs"].append({
                     "url": job.offlineurl(config.localhost),
                     "numobjects": len(job.paths),
+                    "numdone": len([path for path in job.paths if path.done]),
                 })
 
             newvideo["segments"].append(newsegment)
