@@ -310,11 +310,11 @@ function TrackObjectUI(button, container, copypastecontainer, videoframe, job, p
                         hasdone = true;
                         break;
                     }
-                    if (!hasdone) {
-                        me.doneheader.hide();
-                        me.showingdone = false;
-                        me.donecontainer.slideUp();
-                    }
+                }
+                if (!hasdone) {
+                    me.doneheader.hide();
+                    me.showingdone = false;
+                    me.donecontainer.slideUp();
                 }
             }
         });

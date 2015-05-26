@@ -91,15 +91,22 @@ def totrackpaths(paths):
 
 def fromtrackpath(path, job, start, stop):
     newpath = Path(job = job)
-    for box in path.boxes.values():
-        f = box.frame
-        blowradius = job.segment.video.blowradius
-        if f != start and f != stop and f % (blowradius + 1) == 0:
-            newpath.boxes.append(tovaticbox(newpath, box))
+    frames = sorted(path.boxes.keys())
+    laststored = None
+    blowradius = job.segment.video.blowradius
+    for frame in frames:
+        if frame != start and frame != stop:
+            box = path.boxes[frame]
+            if laststored is None or frame - laststored > blowradius:
+                newpath.boxes.append(tovaticbox(newpath, box))
+                laststored = frame
+            elif box.lost or box.occluded:
+                newpath.boxes[-1] = tovaticbox(newpath, box)
+                laststored = frame
     return newpath
 
 def tovaticbox(path, box):
-    newbox = Box(path = path)
+    newbox = Box()
     newbox.frombox(box)
     return newbox
 
