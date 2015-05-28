@@ -1227,6 +1227,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         if (this.topviewhandle) {
             this.topviewhandle.remove();
         }
+        this.autotrackmanager.canceltracking();
         this.deleted = true;
     }
 
@@ -1379,6 +1380,15 @@ function AutoTrackManager(tracks, track, forwardtracker, bidirectionaltracker)
         return this.intervals.length != 0;
     }
 
+    this.canceltracking = function() {
+        for (var i in this.intervals) {
+            this.intervals[i]["canceled"] = true;
+            if (this.intervals[i]["request"]) {
+                this.intervals[i]["request"].abort();
+            }
+        }
+    }
+
     // Callback on completing of request
     this.requestcomplete = function(interval, data) {
         console.log("TRACKING: Completed tracking between " + interval["start"] + " and " + interval["end"]);
@@ -1400,7 +1410,9 @@ function AutoTrackManager(tracks, track, forwardtracker, bidirectionaltracker)
 
     this.makerequest = function(interval) {
         var now = new Date();
-        if (interval["end"] - interval["start"] < this.mininterval) {
+        if (interval["canceled"]) {
+            this.requestcomplete(interval, null);
+        } else if (interval["end"] && interval["end"] - interval["start"] < this.mintrackframes) {
             // Smaller than min interval so we will just interpolate
             console.log("TRACKING: Linear interpolation between " + interval["start"] + " and " + interval["end"]);
             this.requestcomplete(interval, null);

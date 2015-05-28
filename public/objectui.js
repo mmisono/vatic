@@ -1242,7 +1242,7 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
         } else if (this.objectselected == null) {
             this.normal();
         } else if (this.objectselected == this) {
-            this.highlight();
+            this.selected();
         } else if (this.objectselected != null) {
             this.inactive();
         }
@@ -1252,11 +1252,20 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
         this.objectselected = object;
         this.updatebackground();
         if (this.track.done) return;
-        if (object == null || object == this) {
+        if (object == null) { 
             this.track.setlock(false);
+            this.track.dim(false);
+            this.track.highlight(false);
+        } else if (object == this) {
+            this.track.setlock(false);
+            this.track.dim(false);
+            this.track.highlight(true);
         } else {
             this.track.setlock(true);
+            this.tracks.dim(true);
+            this.track.highlight(false);
         }
+        this.updateboxtext();
     }
 
     this.mouseover = function()
@@ -1299,6 +1308,14 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
         this.handle.css({
             'background-color': me.color[1],
             'border-color': me.color[1]
+        });
+    }
+
+    this.selected = function()
+    {
+        this.handle.css({
+            'border-color': "black",
+            'background-color': me.color[2],
         });
     }
 
