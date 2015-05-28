@@ -186,7 +186,6 @@ function ui_setup(job)
     $("<select>").appendTo("#fulltrackingbox").attr("id", "fulltrackingselect");
     $("<option>").appendTo("#fulltrackingselect").attr("value", "none").text("None");
     $("#fulltrackingbox").append("<div id='fulltrackingbutton' class='button'>Run Tracking</div>");
-    $("#fulltrackingbox").append("<div id='trackallbutton' class='button'>Track All</div>");
 
     if (mturk_isoffline())
     {
@@ -621,12 +620,6 @@ function ui_setupfulltrack(objectui, autotracker, job, tracks)
             }
 
         });
-    });
-
-    $("#trackallbutton").button().click(function() {
-        for (var i in tracks.tracks) {
-            tracks.tracks[i].autotrackmanager.tracktoend()
-        }
     });
 }
 

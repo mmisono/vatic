@@ -1357,6 +1357,10 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         return next['frame'];
     }
 
+    this.rightmost = function() {
+        return this.journal.rightmost();
+    }
+
     this.istracking = function() {
         return this.autotrackmanager.istracking();
     }
