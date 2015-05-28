@@ -988,7 +988,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
                     me.fixposition();
                     me.recordposition();
                     me.notifyupdate();
-                    if (me.autotrack) me.autotrackmanager.addkeyframe()
+                    if (me.autotrack) me.autotrackmanager.addcurrentkeyframe()
                     eventlog("resizable", "Resize a box");
                     me.highlight(false);
                 },
@@ -1007,7 +1007,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
                     me.fixposition();
                     me.recordposition();
                     me.notifyupdate();
-                    if (me.autotrack) me.autotrackmanager.addkeyframe()
+                    if (me.autotrack) me.autotrackmanager.addcurrentkeyframe()
     
                     eventlog("draggable", "Drag-n-drop a box");
                 },
@@ -1127,7 +1127,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
             this.fixposition();
             this.recordposition();
             this.notifyupdate();
-            if (me.autotrack) me.autotrackmanager.addkeyframe()
+            if (me.autotrack) me.autotrackmanager.addcurrentkeyframe()
         }
     }
 
@@ -1468,11 +1468,21 @@ function AutoTrackManager(tracks, track, forwardtracker, bidirectionaltracker)
         }, this.waittime + 10);
     }
 
-    // Use a new key frame for tracking
-    this.addkeyframe = function(callback)
+    this.tracktoend = function(callback)
+    {
+        this.addkeyframe(this.track.journal.rightmostframe());
+    }
+
+    this.addcurrentkeyframe = function(callback)
     {
         var frame = this.track.player.frame;
         this.track.recordposition();
+        this.addkeyframe(frame, callback);
+    }
+
+    // Use a new key frame for tracking
+    this.addkeyframe = function(frame, callback)
+    {
         var added = false;
 
         // Check if the key frame falls in any of the requested intervals
@@ -1761,6 +1771,20 @@ function Journal(start, blowradius)
                 'leftframe': lefttime,
                 'right': right,
                 'rightframe': righttime};
+    }
+
+    this.rightmostframe = function()
+    {
+        var itemtime = null;
+        for (var idx in this.annotations)
+        {
+            var t = parseInt(idx);
+            if (itemtime == null || t > itemtime)
+            {
+                itemtime = t;
+            }
+        }
+        return itemtime;
     }
 
     /*

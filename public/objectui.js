@@ -790,7 +790,7 @@ function TrackObject(job, player, activecontainer, donecontainer, color, copypas
         });
 
         if (this.track.done) this.setdone(this.track.done);
-        if (this.track.autotrack && !this.loaded) this.track.autotrackmanager.addkeyframe();
+        if (this.track.autotrack && !this.loaded) this.track.autotrackmanager.addcurrentkeyframe();
     }
 
     this.updateboxtext = function()

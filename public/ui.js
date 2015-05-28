@@ -23,7 +23,7 @@ function ui_build(job)
     ui_setupslider(player);
     ui_setupsubmit(job, tracks);
     ui_setupclear(objectui);
-    ui_setupfulltrack(objectui, autotracker, job);
+    ui_setupfulltrack(objectui, autotracker, job, tracks);
     ui_setupclickskip(job, player, tracks, objectui);
     ui_setupkeyboardshortcuts(shortcut, job, player);
     ui_loadprevious(job, objectui);
@@ -186,6 +186,7 @@ function ui_setup(job)
     $("<select>").appendTo("#fulltrackingbox").attr("id", "fulltrackingselect");
     $("<option>").appendTo("#fulltrackingselect").attr("value", "none").text("None");
     $("#fulltrackingbox").append("<div id='fulltrackingbutton' class='button'>Run Tracking</div>");
+    $("#fulltrackingbox").append("<div id='trackallbutton' class='button'>Track All</div>");
 
     if (mturk_isoffline())
     {
@@ -585,7 +586,7 @@ function ui_setupclear(objectui)
     });
 }
 
-function ui_setupfulltrack(objectui, autotracker, job)
+function ui_setupfulltrack(objectui, autotracker, job, tracks)
 {
     var fulltrackingselected = function() {
         var value = $("#fulltrackingselect").val();
@@ -620,6 +621,12 @@ function ui_setupfulltrack(objectui, autotracker, job)
             }
 
         });
+    });
+
+    $("#trackallbutton").button().click(function() {
+        for (var i in tracks.tracks) {
+            tracks.tracks[i].autotrackmanager.tracktoend()
+        }
     });
 }
 
