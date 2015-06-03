@@ -713,8 +713,16 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
         pos.occluded = value;
         pos.generated = false;
         this.journal.mark(this.player.frame, pos);
+
+        var nextframe = this.nextkeyframe(this.player.frame);
+        var curframe = this.player.frame;
+        for (t in this.journal.annotations) {
+            var time = parseInt(t);
+            if (time > curframe && (time < nextframe || nextframe == null))
+                this.journal.annotations[t].occluded = value;
+        }
+
         this.journal.artificialright = this.journal.rightmost();
-        this.journal.cleartonextkeyframe(this.player.frame);
         this.draw(this.player.frame, pos);
     }
 
@@ -935,7 +943,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
             this.topviewhandle.removeClass("boundingboxoccluded");
         }
 
-        if (position.generated)
+        if (position.generated && !position.occluded)
         {
             this.topviewhandle.addClass("boundingboxgenerated");
         } else
@@ -1067,7 +1075,7 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
             this.handle.removeClass("boundingboxoccluded");
         }
 
-        if (position.generated)
+        if (position.generated && !position.occluded)
         {
             this.handle.addClass("boundingboxgenerated");
         } else
