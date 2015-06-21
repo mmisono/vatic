@@ -330,7 +330,7 @@ function TrackCollection(player, topviewplayer, job)
         this.forwardtracker = value;
         for (var i in this.tracks)
         {
-            this.tracks[i].forwardtracker = value;
+            this.tracks[i].autotrackmanager.forwardtracker = value;
         }
     }
 
@@ -339,7 +339,7 @@ function TrackCollection(player, topviewplayer, job)
         this.bidirectionaltracker = value;
         for (var i in this.tracks)
         {
-            this.tracks[i].bidirectionaltracker = value;
+            this.tracks[i].autotrackmanager.bidirectionaltracker = value;
         }
     }
 
@@ -487,10 +487,8 @@ function Track(tracks, player, topviewplayer, color, position, autotrack, forwar
     this.text = "";
     this.deleted = false;
     this.offset = 0;
-    this.forwardtracker = forwardtracker;
-    this.bidirectionaltracker = bidirectionaltracker;
     this.autotrack = autotrack;
-    this.autotrackmanager = new AutoTrackManager(this.tracks, this, this.forwardtracker, this.bidirectionaltracker);
+    this.autotrackmanager = new AutoTrackManager(this.tracks, this, forwardtracker, bidirectionaltracker);
 
     this.onmouseover = [];
     this.onmouseout = [];

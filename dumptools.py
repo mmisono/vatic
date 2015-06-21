@@ -158,6 +158,7 @@ def dumpmatlab(file, data, video, scale, fields):
 
 def dumpxml(file, data, groundplane, fields):
     file.write("<annotations count=\"{0}\">\n".format(len(data)))
+    hidelost = "lost" not in fields
     for id, track in enumerate(data):
         file.write("\t<track ")
         for f in fields:
@@ -166,7 +167,8 @@ def dumpxml(file, data, groundplane, fields):
                 file.write("{0}=\"{1}\" ".format(f, d))
         file.write(">\n")
         for box in track.boxes:
- 
+            if hidelost and box.lost:
+                continue
             file.write("\t\t<box ")
             hasattributes = False
             for f in fields:
@@ -188,6 +190,7 @@ def dumpxml(file, data, groundplane, fields):
 
 def dumpjson(file, data, groundplane, fields):
     annotations = {}
+    hidelost = "lost" not in fields
     for id, track in enumerate(data):
         result = {}
         for f in fields:
@@ -197,6 +200,9 @@ def dumpjson(file, data, groundplane, fields):
 
         boxes = {}
         for box in track.boxes:
+            if hidelost and box.lost:
+                continue
+
             boxdata = {}
             for f in fields:
                 d = boxdataforfield(box, track.velocities[box.frame], f)
@@ -232,8 +238,13 @@ def dumptext(file, data, groundplane, fields):
         elif type(d) is list:
             [printdata(x, f) for x in d]
 
+    hidelost = "lost" not in fields
     for id, track in enumerate(data):
         for box in track.boxes:
+
+            if hidelost and box.lost:
+                continue
+
             for f in fields:
                 d = trackletdataforfield(track, id, f)
                 if d is None:

@@ -351,7 +351,7 @@ def videodump(slug, outputtype, groundplane, fields=None):
     if outputtype == "json":
         dumptools.dumpjson(outfile, data, groundplane, fields)
     elif outputtype == "xml":
-        dumptools.dumpjson(outfile, data, groundplane, fields)
+        dumptools.dumpxml(outfile, data, groundplane, fields)
     else:
         dumptools.dumptext(outfile, data, groundplane, fields)
 
