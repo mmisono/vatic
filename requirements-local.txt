@@ -1,3 +1,4 @@
+werkzeug
 SQLAlchemy
 wsgilog
 cython==0.20
