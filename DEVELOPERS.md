@@ -115,8 +115,9 @@ get into later.
 - Table columns are defined as properties of the Python class. It is a good idea to look through
 the fie at the different types columns in use. The trickiest are the relational columns that
 look something like this:
-
-> video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
+ 
+<!-- Markdown workaround -->
+    video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
 
 and define relationships between tables.
 
@@ -132,13 +133,15 @@ If you have valuable information in the database:
 
 2. Log into the MySQL shell:
 
-> $ mysql -u root -p
+<!-- Markdown workaround -->
+    $ mysql -u root -p
 
 3. In the MySQL shell run the following commands to add your column.
 
-> $ use vatic;
-> $ describe table_name
-> $ ALTER TABLE table_name ADD column_name datatype
+<!-- Markdown workaround -->
+    $ use vatic;
+    $ describe table_name
+    $ ALTER TABLE table_name ADD column_name datatype
 
 Note: Look up instructions on descibing a column in MySQL if you are not familiar with this process.
 
@@ -146,7 +149,7 @@ If you can afford to clear your database, a less error prone method is:
 
 2. Run the following commands
 
-    NOTE: THIS WILL CLEAR YOUR DATABASE.
+NOTE: THIS WILL CLEAR YOUR DATABASE.
 
     $ turkic setup --database --reset
     $ turkic setup --database
