@@ -153,8 +153,19 @@ If you can afford to clear your database, a less error prone method is:
         $ turkic setup --database
 
 
-**server.py**
+**server.py**: This file provides all of the handles that the web interface use to get information about
+a video. The server interface is broken into four sections:
 
+*Basic Commands*: This provides the basic API for the web interface and is how the user will get data
+about a video or store annotations. You will probably have to make changes here, but the code is pretty
+self explainitory.
+
+*Tracking*: This provides the API for performing tracking on a video sequence. 
+
+*Admin Page*: This provides the API used by the admin page. 
+
+*Homography*: This provides the API used for the homographies that appear under the video frame. This
+can probably be ignored and is still a little buggy.
 
 **cli.py**
 
