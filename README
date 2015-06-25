@@ -17,25 +17,54 @@ however it should work any operating system and with any server.
 
 To get the modified version of VATIC follow these instructions:
 
-If you want to use a virtualenv run the first two lines:
-    $ virtualenv .env
-    $ source .env/bin/activate
-
     $ git clone https://github.com/johndoherty/vatic.git
+
+--- Local Install -------------------------------------------------------------
+
+Follow these instructions if you are attempting to install and run vatic locally.
+
+First run:
+    $ cp vatic-install-local.sh ..
+    $ cd ..
+    $ chmod +x vatic-install-local.sh
+    $ ./vatic-install-local.sh
+    $ cd vatic
+
+Note: I recommend using a virtual environment (virtualenv) for this project as it makes the
+install much cleaner. All of the scripts for installing locally will rely on a virtualenv.
+
+virtualenv essentially isolates your install to a single directory so it does not conflict
+with other shared resources on your system. The only thing you have to remember is to run the
+following command from the vatic directory everytime you wish to lauch the application locally:
+
+    $ source ../.env/bin/activate
+
+Also, you must install OpenCV python bindings for this to work. You can find instructions
+on how to do this online. Inorder to install these bindings in your virtualenv you must run
+the following commands:
+
+    $ cd /usr/lib/python2.7/dist-packages/
+    $ cp cv* path/to/project/.env/lib/python2.7/site-packages/
+
+Depending on the location of your python install and OpenCV install the opencv python bindings
+might be in another location including:
+  - /usr/local/lib/python2.7/dist-packages/
+  - /usr/local/lib/python2.7/site-packages/
+  - If not these check online for where they might be located.
+
+
+--- HTTP Server Configuration Apache-------------------------------------------------
+
+NOTE: This is only necessary if you need a full apache server (ie for turk).
+For a simple debug server follow the instructions in the previous section.
+
+First run:
     $ cp vatic-install.sh ..
     $ cd ..
     $ chmod +x vatic-install.sh
     $ ./vatic-install.sh
     $ cd vatic
 
---- Notes on virtualenv ------------------------------------------------------------
-
-I recommend using a virtual environment for this project. Doing this will make the install much cleaner, but will require a little additional setup. The steps above show the commands for creating and activating the virtualenv. You also may have to move around OpenCV libraries so they can be accessed by the virtualenv. This step is described in the tracking section.
-
---- HTTP Server Configuration Apache-------------------------------------------------
-
-NOTE: This is only necessary if you need a full apache server (ie for turk).
-For a simple debug server follow the instructions in the next section.
 
 Open the Apache configuration file. On Ubuntu, this file is located at:
 
@@ -69,9 +98,6 @@ After making these changes, restart Apache:
 
     $ sudo apache2ctl graceful
 
---- Simple Server Configureation-------------------------------------------------
-
-Really no additional work 
 
 --- SQL Server Configuration --------------------------------------------------
 
@@ -116,6 +142,14 @@ which will require confirmation to reset in order to prevent data loss.
 Finally, you must also allow VATIC to access turkic, a major dependency:
 
     $ turkic setup --public-symlink
+
+--- Launching the server -----------------------------------------------------
+
+To launch the server locally run the following commands from the vatic directory:
+
+    $ source ../.env/bin/activate
+    $ python start_server.py
+
 
 == ANNOTATION =================================================================
 
@@ -532,16 +566,6 @@ warn you and abort. You can force deletion with:
 
 which will REMOVE ALL DATA AND CANNOT BE UNDONE.
 
---- Tracking -----------------------------------------------------------------
-
-If you want to automate the annotation process with a tracking algorithm use
-the --initial-tracking option when loading a video. In order for this to work
-you need OpenCV installed on your computer with python bindings. If you are
-using a virtualenv you need to copy the python bindings to a virtualenv
-site-packages directory. Do this with:
-
-    $ cd /usr/lib/python2.7/dist-packages/
-    $ cp cv* path/to/project/.env/lib/python2.7/site-packages/
 
 == REFERENCES =================================================================
 
