@@ -116,7 +116,7 @@ get into later.
 the fie at the different types columns in use. The trickiest are the relational columns that
 look something like this:
 
-    video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
+> video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
 
 and define relationships between tables.
 
@@ -132,13 +132,13 @@ If you have valuable information in the database:
 
 2. Log into the MySQL shell:
 
-    $ mysql -u root -p
+> $ mysql -u root -p
 
 3. In the MySQL shell run the following commands to add your column.
 
-    $ use vatic;
-    $ describe table_name
-    $ ALTER TABLE table_name ADD column_name datatype
+> $ use vatic;
+> $ describe table_name
+> $ ALTER TABLE table_name ADD column_name datatype
 
 Note: Look up instructions on descibing a column in MySQL if you are not familiar with this process.
 
