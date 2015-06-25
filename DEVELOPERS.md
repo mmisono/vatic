@@ -6,10 +6,10 @@ only want to use VATIC, please see README instead.
 
 This fork of VATIC is broken up into four different packages:
 
-    1. vatic - video annotation tool
-    2. turkic - a platform for easy MTurk management
-    3. pyvision - a simple Python computer vision toolkit
-    3. vatic_tracking - a simple tracking framework that integrates with vatic
+1. vatic - video annotation tool
+2. turkic - a platform for easy MTurk management
+3. pyvision - a simple Python computer vision toolkit
+4. vatic_tracking - a simple tracking framework that integrates with vatic
 
 In general, you likely want to only modify VATIC, which houses the essential
 tools for video annotation, such as: the JavaScript video player, instructions,
