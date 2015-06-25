@@ -1,5 +1,4 @@
-VATIC - Video Annotation Tool from Irvine, California
-=====================================================
+# VATIC - Video Annotation Tool from Irvine, California #
 
 VATIC is an online video annotation tool for computer vision research that
 crowdsources work to Amazon's Mechanical Turk. Our tool makes it easy to build
@@ -8,16 +7,14 @@ massive, affordable video data sets.
 This document will describe how to install and use VATIC. If you want to modify
 VATIC, please read DEVELOPERS after reading this document.
 
-INSTALLATION
-------------
+## INSTALLATION ##
 
 Note: VATIC has only been tested on Ubuntu with Apache 2.2 HTTP server and a
 MySQL server. This document will describe installation on this platform,
 however it should work any operating system and with any server.
 
 
-OpenCV
-------
+### OpenCV ###
 
 This version of vatic requires OpenCV to perform the tracking. If you have OpenCV
 installed on your system skip this step. Otherwise follow these instuctions to install
@@ -34,15 +31,13 @@ On Mac first install homebrew (http://brew.sh/) and run the following commands:
 Look here for better instructions: https://jjyap.wordpress.com/2014/05/24/installing-opencv-2-4-9-on-mac-osx-with-python-support/
 
 
-Download
---------
+### Download ###
 
 To get the modified version of VATIC follow these instructions:
 
     $ git clone https://github.com/johndoherty/vatic.git
 
-Local Install
--------------
+### Local Install ###
 
 Follow these instructions if you are attempting to install and run vatic locally.
 
@@ -133,7 +128,7 @@ the public directory in VATIC, and WSGIScriptAlias to VATIC's server.py file.
 If you do use Apache for other purposes, you will have to setup a new virtual
 host with the correct document root and script alias, as shown above.
 
-Make sure you have the mod_headers module enabled:
+Make sure you have the mod\_headers module enabled:
 
     $ sudo cp /etc/apache2/mods-available/headers.load /etc/apache2/mods-enabled
 
@@ -142,7 +137,8 @@ After making these changes, restart Apache:
     $ sudo apache2ctl graceful
 
 
---- SQL Server Configuration --------------------------------------------------
+SQL Server Configuration
+------------------------
 
 We recommend creating a separate database specifically for VATIC:
 
@@ -151,7 +147,8 @@ We recommend creating a separate database specifically for VATIC:
 
 The next section will automatically create the necessary tables.
 
---- Setup ---------------------------------------------------------------------
+Setup
+-----
 
 Inside the vatic directory, copy config.py-example to config.py:
 
@@ -186,7 +183,8 @@ Finally, you must also allow VATIC to access turkic, a major dependency:
 
     $ turkic setup --public-symlink
 
---- Launching the server -----------------------------------------------------
+Launching the server
+--------------------
 
 To launch the server locally run the following commands from the vatic directory:
 
