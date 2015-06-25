@@ -55,20 +55,20 @@ First run:
 
 Note: this install script attempts to install the following dependencies on Ubuntu:
 
-git
-python-setuptools 
-python-dev
-libavcodec-dev
-libavformat-dev
-libswscale-dev
-libjpeg62
-libjpeg62-dev
-libfreetype6
-libfreetype6-dev
-mysql-server-5.5
-mysql-client-5.5
-libmysqlclient-dev
-gfortran 
+- git
+- python-setuptools 
+- python-dev
+- libavcodec-dev
+- libavformat-dev
+- libswscale-dev
+- libjpeg62
+- libjpeg62-dev
+- libfreetype6
+- libfreetype6-dev
+- mysql-server-5.5
+- mysql-client-5.5
+- libmysqlclient-dev
+- gfortran 
 
 If you are on another platform look into how best to install these. On Mac I recommend using 
 homebrew.
