@@ -54,16 +54,16 @@ of the video player
 
 
 **videoplayer.js**: This file sets up the video player. It is in charge of displaying
-each frame when the user scrubs the frames or presses play. It doesn't do anything
+each frame when the user scrubs the frames or presses play. It does not do anything
 with the annotations so is probably not necessary to change.
 
 
 **tracks.js**: This defines two important classes that you will interface with regularly.
-First, Track stores all of the information about a single annotation. It also sets up
-the bounding box that you use to move the track in each frame of the video. Track stores
-its data in what is know as a Journal.
+First, `Track` stores all of the information about a single annotation. It also sets up
+the bounding box that you use to move the track in each frame of the video. `Track` stores
+its data in what is know as a `Journal`.
 
-Journal is the key datastructure for a track. A tracks Journal stores a set of annotations
+`Journal` is the key datastructure for a track. A tracks `Journal` stores a set of annotations
 in a dictionary mapping frames to bounding boxes. It provides an interface for querying that
 dictionary which is important for linear interpolation between marked frames.
 
@@ -71,22 +71,22 @@ This file also provides a class called AutoTrackManager that is responsible for 
 tracking algorithms on the server. Changes to the trackers and tracking interface may
 require changes here.
 
-TrackCollection is simply a collection of tracks and provides some interfaces for mananging
+`TrackCollection` is simply a collection of tracks and provides some interfaces for mananging
 the collection.
 
 
-**objectui.js**: This defines a couple of classes. Most notably TrackObjectUI and
-TrackObject. Together these two classes manage the lifecycle of the annotations for a
+**objectui.js**: This defines a couple of classes. Most notably `TrackObjectUI` and
+`TrackObject`. Together these two classes manage the lifecycle of the annotations for a
 single object. They also manage the column you see on the right side of the video player.
 This file will almost certainly require changes if you want to add additional ways of
 interacting with an annotation.
 
-TrackObject provides ways of interacting with a Track via cells in the table on the right
+`TrackObject` provides ways of interacting with a `Track` via cells in the table on the right
 side of the video player. Specifically, this handles marking tracks as outside of the frame
 or occluded.
 
-TrackObjectUI is a container for TrackObjects. This also handles the initialization of new
-TrackObjects as well as the ui for selecting objects for editing.
+`TrackObjectUI` is a container for `TrackObjects`. This also handles the initialization of new
+`TrackObjects` as well as the ui for selecting objects for editing.
 
 Server
 ---------
@@ -110,7 +110,7 @@ being stored on the server and to understand the relationships between tables. A
 conventions used in sqlalchemy that will help you understand this file:
 
 - A Python class correspnds to a table. Adding a new table will require ceating a new class
-and defining the \__tablename\__ property. There is more to creating a new table that I will
+and defining the `__tablename__` property. There is more to creating a new table that I will
 get into later.
 - Table columns are defined as properties of the Python class. It is a good idea to look through
 the fie at the different types columns in use. The trickiest are the relational columns that
