@@ -42,6 +42,7 @@ To get the modified version of VATIC follow these instructions:
 Follow these instructions if you are attempting to install and run vatic locally.
 
 First run:
+
     $ cp vatic-install-local.sh ..
     $ cd ..
     $ chmod +x vatic-install-local.sh
