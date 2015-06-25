@@ -127,7 +127,7 @@ on a system that does not contain any valuable data to test it out.
 
 To add a column to a table follow these steps:
 
-1. Add a field to the table in the models.py file.
+Add a field to the table in the models.py file.
 
 If you have valuable information in the database:
 
@@ -147,10 +147,10 @@ If you can afford to clear your database, a less error prone method is:
 
 2. Run the following commands
 
-NOTE: THIS WILL CLEAR YOUR DATABASE.
+    **NOTE: THIS WILL CLEAR YOUR DATABASE.**
 
-    $ turkic setup --database --reset
-    $ turkic setup --database
+        $ turkic setup --database --reset
+        $ turkic setup --database
 
 
 **server.py**
