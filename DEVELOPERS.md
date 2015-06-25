@@ -133,12 +133,10 @@ If you have valuable information in the database:
 
 2. Log into the MySQL shell:
 
-<!-- Markdown workaround -->
         $ mysql -u root -p
 
 3. In the MySQL shell run the following commands to add your column.
 
-<!-- Markdown workaround -->
         $ use vatic;
         $ describe table_name
         $ ALTER TABLE table_name ADD column_name datatype
