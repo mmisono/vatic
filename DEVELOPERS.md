@@ -97,9 +97,58 @@ for the web interface. The backend is all written in Python and relys on a coupl
 libraries including pyvision, turkic, and vatic_tracking. Documentation for these libraries
 can be found in the READMEs of their respective repositiories.
 
-**start_server.py**
-**models.py**
+**start_server.py** This is a small script that is used to run the tool locally. You should
+not have to make changes this, but if you are having trouble running it on your machine, this
+might be a good place to look. It runs a simple werkzeug server.
+
+
+**models.py**: This is the file that controls all of the models used to store the annotations
+in the MySQL database. You will certainly need to make changes to this file. VATIC uses 
+sqlalchemy to manage the databases in Python so it might be a good idea to read up on that
+(http://www.sqlalchemy.org/). It is a good idea to look through this file and see what is 
+being stored on the server and to understand the relationships between tables. A couple of
+conventions used in sqlalchemy that will help you understand this file:
+
+- A Python class correspnds to a table. Adding a new table will require ceating a new class
+and defining the __tablename__ property. There is more to creating a new table that I will
+get into later.
+- Table columns are defined as properties of the Python class. It is a good idea to look through
+the fie at the different types columns in use. The trickiest are the relational columns that
+look something like this:
+    video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
+and define relationships between tables.
+
+Making changes to your database schema will require changes to this file as well as a couple
+of additional commands. If you are new to VATIC or sqlalchemy I recommend you make changes first
+on a system that does not contain any valuable data to test it out.
+
+To add a column to a table follow these steps:
+1. Add a field to the table in the models.py file.
+
+If you have valuable information in the database:
+
+2. Log into the MySQL shell:
+    $ mysql -u root -p
+
+3. In the MySQL shell run the following commands to add your column.
+    $ use vatic;
+    $ describe table_name
+    $ ALTER TABLE table_name ADD column_name datatype
+
+Note: Look up instructions on descibing a column in MySQL if you are not familiar with this process.
+
+If you can afford to clear your database, a less error prone method is:
+
+2. Run the following commands
+
+    NOTE: THIS WILL CLEAR YOUR DATABASE.
+    $ turkic setup --database --reset
+    $ turkic setup --database
+
+
 **server.py**
+
+
 **cli.py**
 
 
