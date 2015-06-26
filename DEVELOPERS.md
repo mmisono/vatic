@@ -122,7 +122,7 @@ look something like this:
  
         video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
 
-See the [Tips](#Tips) section below for information about modifying the MySQL database
+See the [Tips](#tips) section below for information about modifying the MySQL database
 schema.
 
 **server.py**: This file provides all of the handles for the API that the web interface uses to
@@ -162,18 +162,18 @@ Making changes to your database schema will require changes to the models.py as 
 of additional commands. If you are new to VATIC or sqlalchemy I recommend you make changes first
 on a system that does not contain any valuable data.
 
-To add a column to a table follow these steps:
+**Adding a column**: To add a column to a table follow these steps:
 
-1. Add a field to the table in the models.py file.
+Add a field to the table in the models.py file.
 
-    If you have valuable information in the database:
+If you have valuable information in the database:
 
-2. Log into the MySQL shell:
+1. Log into the MySQL shell:
 
         $ mysql -u root -p
         $ Enter your password
 
-3. In the MySQL shell run the following commands to add your column.
+2. In the MySQL shell run the following commands to add your column.
 
         $ use vatic;
         $ describe table_name;
@@ -183,7 +183,7 @@ To add a column to a table follow these steps:
 
 If you can afford to clear your database, a less error prone method is:
 
-2. Run the following commands
+1. Run the following commands
 
     **NOTE: THIS WILL CLEAR YOUR DATABASE.**
 
