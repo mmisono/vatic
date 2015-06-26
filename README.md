@@ -17,7 +17,7 @@ however it should work any operating system and with any server.
 ### OpenCV ###
 
 This version of vatic requires OpenCV to perform the tracking. If you have OpenCV
-installed on your system skip this step. Otherwise follow these instuctions to install
+installed on your system skip this step. Otherwise follow these instructions to install
 it with Python bindings:
 
 On Ubuntu look at https://help.ubuntu.com/community/OpenCV. The install process can
@@ -74,12 +74,12 @@ install much cleaner. All of the scripts for installing locally will rely on a v
 
 virtualenv essentially isolates your install to a single directory so it does not conflict
 with other shared resources on your system. The only thing you have to remember is to run the
-following command from the vatic directory everytime you wish to lauch the application locally:
+following command from the vatic directory every time you wish to launch the application locally:
 
     $ source ../.env/bin/activate
 
 Also, you must install OpenCV python bindings for this to work. You can find instructions
-on how to do this online. Inorder to install these bindings in your virtualenv you must run
+on how to do this online. In order to install these bindings in your virtualenv you must run
 the following commands:
 
     $ cd /usr/lib/python2.7/dist-packages/
@@ -165,7 +165,7 @@ configure VATIC:
                     mysql://user:pass@localhost/vatic
     geolocation     API key from ipinfodb.com for geolocation services
 
-If you do not plan on using VATIC on Mechcanical Turk (offlien mode only), you
+If you do not plan on using VATIC on Mechanical Turk (offline mode only), you
 can leave the signature and accesskey empty.
 
 After saving results, you can then initialize the database:
@@ -212,7 +212,7 @@ Turk.
 Our system requires that videos are extracted into JPEG frames. Our tool can 
 do this automatically for you:
 
-Note: Ubuntu 14.04 does not ffmpeg but has avconv which is equivelant. Install
+Note: Ubuntu 14.04 does not have ffmpeg but has avconv which is equivalent. Install
 that with apt-get and replace 'ffmpeg' in line 17 of pyvision/vision/ffmpeg.py
 with 'avconv'
 
@@ -527,7 +527,7 @@ workers, which you can then manually verify for correctness:
     $ turkic sample /tmp
 
 which by default will pick 3 random videos that the worker has completed, and
-pick 4 random frames from each of those videos, and write visualiations to a
+pick 4 random frames from each of those videos, and write visualizations to a
 file in /tmp. You can tweak the number of videos and the number of frames with
 the options:
 
@@ -538,7 +538,7 @@ Moreover, you can only look at work from a certain date:
     $ turkic sample /tmp --since "yesterday"
 
 The filename will follow the format of WORKERID-JOBID.jpg. Once you have
-identified a mallicious worker, you can block them, invalidate ALL of their
+identified a malicious worker, you can block them, invalidate ALL of their
 work, and respawn their jobs with the command:
 
     $ turkic invalidate workerid
