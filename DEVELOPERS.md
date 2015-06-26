@@ -25,21 +25,21 @@ workers, payment, and training. You probably should only modify turkic if you
 want to change protocols to how workers are paid and quality control is done.
 
 vatic_tracking is a tracking framework meant to interact with vatic. It provides
-an api that is called by our fork of vatic and is meant to be easily extensible
+an API that is called by our fork of vatic and is meant to be easily extensible
 with tracking algorithms in a variety of languages.
 
 
 Front end
 ---------
 
-All of the front end code is located in javascript files in vatic/public. There
+All of the front end code is located in JavaScript files in vatic/public. There
 is an HTML file whose only purpose is to call load the scripts. The files and their
 purposes are described here:
 
-**bootstrap.js**: This script is incharge of bootstrapping the interface. It starts
+**bootstrap.js**: This script is in charge of bootstrapping the interface. It starts
 up the loading screen and starts preloading the frames from the video. You can most
 likely ignore this file when making changes to the interface, but it might be useful
-to see how things get lauched.
+to see how things get launched.
 
 
 **job.js**: This defines a class that stores all of the metadata for a job. You will
@@ -49,7 +49,7 @@ like passed from the server to the interface.
 
 **ui.js**: This handles basically of the ui initialization and is will be important
 to learn. It essentially defines a table layout for the interface and initializes
-the annotations, the videoplayer, and the column of annotations on the right side 
+the annotations, the video player, and the column of annotations on the right side 
 of the video player
 
 
@@ -63,7 +63,7 @@ First, `Track` stores all of the information about a single annotation. It also 
 the bounding box that you use to move the track in each frame of the video. `Track` stores
 its data in what is know as a `Journal`.
 
-`Journal` is the key datastructure for a track. A tracks `Journal` stores a set of annotations
+`Journal` is the key data structure for a track. A tracks `Journal` stores a set of annotations
 in a dictionary mapping frames to bounding boxes. It provides an interface for querying that
 dictionary which is important for linear interpolation between marked frames.
 
@@ -71,12 +71,12 @@ This file also provides a class called AutoTrackManager that is responsible for 
 tracking algorithms on the server. Changes to the trackers and tracking interface may
 require changes here.
 
-`TrackCollection` is simply a collection of tracks and provides some interfaces for mananging
+`TrackCollection` is simply a collection of tracks and provides some interfaces for managing
 the collection.
 
 
 **objectui.js**: This defines a couple of classes. Most notably `TrackObjectUI` and
-`TrackObject`. Together these two classes manage the lifecycle of the annotations for a
+`TrackObject`. Together these two classes manage the life cycle of the annotations for a
 single object. They also manage the column you see on the right side of the video player.
 This file will almost certainly require changes if you want to add additional ways of
 interacting with an annotation.
@@ -91,11 +91,11 @@ or occluded.
 Server
 ---------
 
-Unlike the frontend, the server code is actually limited to a couple of key files. These
+Unlike the front end, the server code is actually limited to a couple of key files. These
 files handle the storage of annotations in a MySQL database and provide all of the handlers
-for the web interface. The backend is all written in Python and relys on a couple of other
+for the web interface. The back end is all written in Python and relies on a couple of other
 libraries including pyvision, turkic, and vatic_tracking. Documentation for these libraries
-can be found in the READMEs of their respective repositiories.
+can be found in the READMEs of their respective repositories.
 
 **start_server.py** This is a small script that is used to run the tool locally. You should
 not have to make changes this, but if you are having trouble running it on your machine, this
@@ -109,7 +109,7 @@ sqlalchemy to manage the databases in Python so it might be a good idea to read 
 being stored on the server and to understand the relationships between tables. A couple of
 conventions used in sqlalchemy that will help you understand this file:
 
-- A Python class correspnds to a table. Adding a new table will require ceating a new class
+- A Python class corresponds to a table. Adding a new table will require creating a new class
 and defining the `__tablename__` property. There is more to creating a new table that I will
 get into later.
 - Table columns are defined as properties of the Python class. It is a good idea to look through
@@ -141,7 +141,7 @@ If you have valuable information in the database:
         $ describe table_name
         $ ALTER TABLE table_name ADD column_name datatype
 
-Note: Look up instructions on descibing a column in MySQL if you are not familiar with this process.
+Note: Look up instructions on describing a column in MySQL if you are not familiar with this process.
 
 If you can afford to clear your database, a less error prone method is:
 
@@ -158,7 +158,7 @@ a video. The server interface is broken into four sections:
 
 *Basic Commands*: This provides the basic API for the web interface and is how the user will get data
 about a video or store annotations. You will probably have to make changes here, but the code is pretty
-self explainitory.
+self explanatory.
 
 *Tracking*: This provides the API for performing tracking on a video sequence. 
 
@@ -167,7 +167,19 @@ self explainitory.
 *Homography*: This provides the API used for the homographies that appear under the video frame. This
 can probably be ignored and is still a little buggy.
 
-**cli.py**
+**cli.py**: This file provides the command line interface used to interact with the annotation tool from
+the back end. This script is the one that allows you to extract, load, and publish videos to the server.
+If you want to add features to back end interface, you will have to modify this file. The commands are 
+given in the form:
+
+    $ vatic vatic_command --options
+
+`vatic` is the base for all vatic commands. To add a new vatic command, you must add a new `Command`
+subclass with the name of your command to cli.py. This subclass also must have the `@handler` decorator
+and will probably have to implement the `setup` and `__call__` methods.
+
+It is worth first getting familiar with the commands vatic provides and then seeing how they are
+implemented in cli.py
 
 
 Tips
