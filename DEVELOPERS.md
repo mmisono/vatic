@@ -33,56 +33,59 @@ Front end
 ---------
 
 All of the front end code is located in JavaScript files in vatic/public. There
-is an HTML file whose only purpose is to call load the scripts. The files and their
+is an HTML file whose only purpose is to load these scripts. The files and their
 purposes are described here:
 
 **bootstrap.js**: This script is in charge of bootstrapping the interface. It starts
-up the loading screen and starts preloading the frames from the video. You can most
-likely ignore this file when making changes to the interface, but it might be useful
-to see how things get launched.
+the loading screen and begins preloading the frames from the video. You can probably
+ignore this file when making changes to the interface, but it might be useful to see
+how things get launched.
 
 
-**job.js**: This defines a class that stores all of the metadata for a job. You will
-need to modify this if you plan on adding any addition video metadata that you would
-like passed from the server to the interface.
+**job.js**: This defines the `Job` class that stores all of the metadata for a job. 
+You will need to modify this if you plan on passing any additional video metadata 
+from the server.
 
 
-**ui.js**: This handles basically of the ui initialization and is will be important
-to learn. It essentially defines a table layout for the interface and initializes
-the annotations, the video player, and the column of annotations on the right side 
-of the video player
+**ui.js**: This basically handles the ui initialization. It defines a table layout
+for the interface and initializes the annotations, the video player, and the column
+of annotations on the right side of the video player. This also handles the creation
+of all of the other buttons and ui elements that you see.
 
 
 **videoplayer.js**: This file sets up the video player. It is in charge of displaying
 each frame when the user scrubs the frames or presses play. It does not do anything
-with the annotations so is probably not necessary to change.
+with the annotations so you probably will not be touching this fill often.
 
 
-**tracks.js**: This defines two important classes that you will interface with regularly.
-First, `Track` stores all of the information about a single annotation. It also sets up
-the bounding box that you use to move the track in each frame of the video. `Track` stores
-its data in what is know as a `Journal`.
+**tracks.js**: This defines a couple of important classes that you will interface with
+and modify regularly. First, `Track` stores all of the information about a single
+annotation. There might be confusion in the naming here because our fork of VATIC 
+provides tracking capabilities. This class is much more general purpose and handles
+all of interactions with a single object annotation, including tracking. The `Track`
+class also sets up the bounding box handle that you use to move the track in each
+frame of the video. `Track` stores its data in what is know as a `Journal`.
 
-`Journal` is the key data structure for a track. A tracks `Journal` stores a set of annotations
-in a dictionary mapping frames to bounding boxes. It provides an interface for querying that
-dictionary which is important for linear interpolation between marked frames.
+`Journal` is the key data structure for a track. A track\'s `Journal` stores a set of
+annotations in a dictionary mapping frames to bounding boxes. It provides an interface
+for querying and modifying that dictionary.
 
-This file also provides a class called AutoTrackManager that is responsible for running the
-tracking algorithms on the server. Changes to the trackers and tracking interface may
+This file also provides a class called `AutoTrackManager` that is responsible for running
+the tracking algorithms on the server. Changes to the trackers and tracking interface may
 require changes here.
 
 `TrackCollection` is simply a collection of tracks and provides some interfaces for managing
 the collection.
 
 
-**objectui.js**: This defines a couple of classes. Most notably `TrackObjectUI` and
+**objectui.js**: This defines a couple of classes, most notably `TrackObjectUI` and
 `TrackObject`. Together these two classes manage the life cycle of the annotations for a
 single object. They also manage the column you see on the right side of the video player.
 This file will almost certainly require changes if you want to add additional ways of
 interacting with an annotation.
 
 `TrackObject` provides ways of interacting with a `Track` via cells in the table on the right
-side of the video player. Specifically, this handles marking tracks as outside of the frame
+side of the video player. For example, this handles marking tracks as outside of the frame
 or occluded.
 
 `TrackObjectUI` is a container for `TrackObjects`. This also handles the initialization of new
@@ -118,8 +121,6 @@ look something like this:
  
 <!-- Markdown workaround -->
     video = relationship(Video, backref = backref("labels", cascade = "all,delete"))
-
-and define relationships between tables.
 
 Making changes to your database schema will require changes to this file as well as a couple
 of additional commands. If you are new to VATIC or sqlalchemy I recommend you make changes first
