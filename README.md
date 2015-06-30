@@ -4,6 +4,11 @@ VATIC is an online video annotation tool for computer vision research that
 crowdsources work to Amazon's Mechanical Turk. Our tool makes it easy to build
 massive, affordable video data sets. 
 
+This fork of VATIC is designed to automate the annotation process by integrating
+tracking algorithms. In its current state it is designed to assist smaller groups
+of people with video annotation and probably breaks some of the Amazon Mechanical
+Turk integration.
+
 This document will describe how to install and use VATIC. If you want to modify
 VATIC, please read DEVELOPERS after reading this document.
 
@@ -13,10 +18,12 @@ Note: VATIC has only been tested on Ubuntu with Apache 2.2 HTTP server and a
 MySQL server. This document will describe installation on this platform,
 however it should work any operating system and with any server.
 
+Also, any `turkic` command listed below must be executed from the vatic directory.
+
 
 ### OpenCV ###
 
-This version of vatic requires OpenCV to perform the tracking. If you have OpenCV
+This version of VATIC requires OpenCV to perform the tracking. If you have OpenCV
 installed on your system skip this step. Otherwise follow these instructions to install
 it with Python bindings:
 
@@ -78,14 +85,14 @@ following command from the vatic directory every time you wish to launch the app
 
     $ source ../.env/bin/activate
 
-Also, you must install OpenCV python bindings for this to work. You can find instructions
+Also, you must install the OpenCV Python bindings for this to work. You can find instructions
 on how to do this online. In order to install these bindings in your virtualenv you must run
 the following commands:
 
     $ cd /usr/lib/python2.7/dist-packages/
     $ cp cv* path/to/project/.env/lib/python2.7/site-packages/
 
-Depending on the location of your python install and OpenCV install the opencv python bindings
+Depending on the location of your python install and OpenCV install the OpenCV Python bindings
 might be in another location including:
   - /usr/local/lib/python2.7/dist-packages/
   - /usr/local/lib/python2.7/site-packages/
@@ -94,8 +101,8 @@ might be in another location including:
 
 ### HTTP Server Configuration Apache ###
 
-NOTE: This is only necessary if you need a full apache server (ie for turk).
-For a simple debug server follow the instructions in the previous section.
+NOTE: This is only necessary if you need a full apache server. For a simple debug
+server follow the instructions in the previous section.
 
 First run:
     $ cp vatic-install.sh ..
@@ -189,7 +196,7 @@ To launch the server locally run the following commands from the vatic directory
     $ source ../.env/bin/activate
     $ python start_server.py
 
-If you are running on a server you will not have to start the server as apache will be
+If you are running on a server you will not have to start the server as Apache will be
 running. You may occasionally have to restart apache using:
 
     $ sudo apache2ctl restart
@@ -203,9 +210,10 @@ can verify this with:
     $ turkic status --verify
 
 If you receive any error messages, it means the installation was not complete
-and you should review the previous section. Note: If you do not plan on
-using Mechanical Turk, you can safely ignore any errors caused by Mechanical
-Turk.
+and you should review the previous section.
+
+Note: If you do not plan on using Mechanical Turk, you can safely ignore any
+errors caused by Mechanical Turk.
 
 ### Frame Extraction ###
 
