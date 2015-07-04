@@ -24,7 +24,7 @@ turkic is a framework that makes it easy to send jobs to MTurk. It manages
 workers, payment, and training. You probably should only modify turkic if you
 want to change protocols to how workers are paid and quality control is done.
 
-vatic_tracking is a tracking framework meant to interact with VATIC. It provides
+vatic\_tracking is a tracking framework meant to interact with VATIC. It provides
 an API that is called by our fork of VATIC and is meant to be easily extensible
 with tracking algorithms in a variety of languages.
 
@@ -97,7 +97,7 @@ Server
 Unlike the front end, the server code is actually limited to just a couple of key files. These
 files handle the storage of annotations in a MySQL database and provide all of the handlers
 for the API used by the web interface. The back end is written in Python and relies on a couple
-of other libraries including pyvision, turkic, and vatic_tracking. Documentation for these
+of other libraries including pyvision, turkic, and vatic\_tracking. Documentation for these
 libraries can be found in the READMEs of their respective repositories.
 
 **start_server.py** This is a small script that is used to run the annotation tool locally. You
@@ -162,7 +162,7 @@ Making changes to your database schema will require changes to the models.py as 
 of additional commands. If you are new to VATIC or sqlalchemy I recommend you make changes first
 on a system that does not contain any valuable data.
 
-**Adding a column**: To add a column to a table follow these steps:
+**Adding a column**: 
 
 Add a field to the table in the models.py file.
 

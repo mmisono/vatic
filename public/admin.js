@@ -40,9 +40,9 @@ function setupexportpane(video, container) {
         .appendTo(container)
         .attr("id", "exportvideogp"+video["slug"]);
 
-    $("<label>").appendTo(container)
-        .attr("for", "exportvideogp"+video["slug"])
-        .text("Ground plane");
+    //$("<label>").appendTo(container)
+    //    .attr("for", "exportvideogp"+video["slug"])
+    //    .text("Ground plane");
  
     exportgroundplane.button().click(function() {
         link.attr("href", getdownloadurl(video));
