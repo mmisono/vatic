@@ -116,13 +116,14 @@ function ui_setup(job)
     $("#trackingoptions").hide();
     $("<label>").appendTo("#trackingoptions").attr("for", "forwardtrackingselect").text("Forward: ");
     $("<select>").appendTo("#trackingoptions").attr("id", "forwardtrackingselect");
-    $("<option>").appendTo("#forwardtrackingselect").attr("value", "none").text("None");
+    $("<option>").appendTo("#forwardtrackingselect").attr("value", "none").text("None").attr("selected",true);
     for (var i in job.onlinetrackers) {
         $("<option>").appendTo("#forwardtrackingselect").attr("value", job.onlinetrackers[i]).text(job.onlinetrackers[i]);
     }
-    if (job.onlinetrackers.length > 0) {
-        $("#forwardtrackingselect").val(job.onlinetrackers[0]);
-    }
+    //if (job.onlinetrackers.length > 0) {
+    //    $("#forwardtrackingselect").val(job.onlinetrackers[0]);
+    //}
+    $("#forwardtrackingselect").val("none");
 
     $("<label>").appendTo("#trackingoptions").attr("for", "bidirectionaltrackingselect").text("Bidirectional: ");
     $("<select>").appendTo("#trackingoptions").attr("id", "bidirectionaltrackingselect");
@@ -130,9 +131,10 @@ function ui_setup(job)
     for (var i in job.bidirectionaltrackers) {
         $("<option>").appendTo("#bidirectionaltrackingselect").attr("value", job.bidirectionaltrackers[i]).text(job.bidirectionaltrackers[i]);
     }
-    if (job.bidirectionaltrackers.length > 0) {
-        $("#bidirectionaltrackingselect").val(job.bidirectionaltrackers[0]);
-    }
+    //if (job.bidirectionaltrackers.length > 0) {
+    //    $("#bidirectionaltrackingselect").val(job.bidirectionaltrackers[0]);
+    //}
+    $("#bidirectionaltrackingselect").val("none");
 
     $("#trackingoptions").append(
         "<input type='checkbox' id='trackingoptionsautotrack' checked>" +

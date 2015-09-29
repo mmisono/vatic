@@ -11,18 +11,46 @@ def renumber(it):
     for count, (im, _) in enumerate(it):
         yield im, count
 
+
+def print_boundary(images, boundary):
+    for image, frame in images:
+        yield highlight_box(image,boundary), frame
+
+
+
+def highlight_box(image, box, color = 'red'):
+    """
+    Highlights the bounding box on the given image.
+    """
+    draw = ImageDraw.Draw(image)
+    draw.rectangle(box, outline=color)
+    return image
+
+
+
 if __name__ == '__main__':
     #args:
     video_dir = '/vatic2/uavdata-bryan/raw/4k-04-09-4p-1/full'
-    merged_tracks = '/vatic2/uavdata-bryan/annotations/4k-04-09-4p-1/merged.pkl'
-    args_output = '/vatic2/uavdata-bryan/visualize/debug3_frames'
+    merged_tracks = '/vatic2/uavdata-bryan/annotations/4k-04-09-4p-1-new/merged.pkl'
+    args_output = '/vatic2/uavdata-bryan/visualize/debug6_frames'
 
-    
+
     args_labels = False
     args_groundplane = False
     args_renumber = True
     width = 3840
     height = 2160
+
+    """"
+    Primarily for debugging
+
+    """
+    draw_merge_boundaries = True
+    #merged_tracks = '/vatic2/uavdata-bryan/annotations/4k-04-09-4p-1-new/nomerge.pkl'
+    #args_output = '/vatic2/uavdata-bryan/visualize/nomerge_frames'
+    
+    overlap = 50
+    quadrant_sz = (1280, 720)
 
 
     video = Video( location = video_dir, width = width, height = height)
@@ -61,13 +89,24 @@ if __name__ == '__main__':
     if args_renumber:
         it = renumber(it)
 
+    #pdb.set_trace()
+    if draw_merge_boundaries:
+        #Draws the merge boundaries. The rectangular region where the two spatial regions overlap.
+        #top boundary
+        boundary = (quadrant_sz[0]-overlap, quadrant_sz[1]-overlap, 2*quadrant_sz[0]+overlap, quadrant_sz[1]+overlap)
+        it = print_boundary(it, boundary)
+        #left boundary
+        boundary = (quadrant_sz[0]-overlap, quadrant_sz[1]-overlap, quadrant_sz[0]+overlap, 2*quadrant_sz[1]+overlap)
+        it = print_boundary(it, boundary)
+
     try:
-        os.makedirs(args_output)
+        if not os.path.exists(args_output):
+            os.makedirs(args_output)
     except:
         pass
 
-    vision.visualize.save(it,
-        lambda x: "{0}/{1}.jpg".format(args_output, x))
+
+    vision.visualize.save(it, lambda x: "{0}/{1}.jpg".format(args_output, x))
 
 
     #pdb.set_trace()

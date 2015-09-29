@@ -30,18 +30,73 @@ Look into: class visualize(DumpCommand()
 import pickle, argparse, os
 from collections import defaultdict
 
+from match import match
+
+
 import pdb
 
-def offset_boxes(tracks,offset):
+
+#######################################################
+################   Classes          ###################
+#######################################################
+class Path(object):
+    def __init__(self, id, label, boxes):
+        self.id = id
+        self.label = label
+        self.boxes = boxes
+
+    def __repr__(self):
+        return "<Path {0}>".format(self.id)
+
+def make_paths(segment):
+    """
+    Turns an existing segment, which is a list of dictoinaries where each dictionary (D)
+    corresponds to a path. Where D['label'] returns the path label, and D['pathes'] returns`
+    a list of boxes.
+    """
+    new = []
+    for i in xrange(len(segment)):
+        new.append(Path(i,segment[i]['label'],segment[i]['boxes']))
+    return new
+
+def unmake_paths(segment):
+    """
+    Undoes make_paths
+    """
+    new = []
+    for i in xrange(len(segment)):
+        new.append({'label' : segment[i].label, 'boxes' : segment[i].boxes})
+    return new
+
+#######################################################
+################   Offsets          ###################
+#######################################################
+
+
+def offset_boxes(segment,offset):
     """
     Add offset to each of the bounding box coordinates.
+    where offset = (x, y)
     """
-    for track in tracks:
-        for box in track['boxes']:
+    for path in segment:
+        for box in path.boxes:
             box.xtl += offset[0]
             box.xbr += offset[0]
             box.ytl += offset[1]
             box.ybr += offset[1]
+
+def offset(y,x,overlap, default_box = (1280, 720)):
+    """
+    Compute the upper left corner coordinates given the offset, 
+    """
+    this_x = default_box[0]*x
+    this_y = default_box[1]*y
+    if x > 0:
+        this_x -= overlap
+    if y > 0:
+        this_y -= overlap
+    return this_x, this_y
+
 
 def find_start_end(boxes):
     """
@@ -88,40 +143,245 @@ def merge_tracks(track1, track2, idx1, idx2):
     return track1
 
 
+def inBoundary(box,boundary):
+    """
+    Returns whether the box is in the boundary defined for this merge.
+    """
+    x1, y1, x2, y2 = boundary
+    xc, yc = box.center
+    return xc > x1 and xc < x2 and yc > y1 and yc < y2
+
+
+def getpercentoverlap(boundary):
+    def percentoverlap(first, second):
+        """
+        Scores two paths, first and second, to see if they are the same path.
+
+        A lower score is better. 0 is a perfect match. This method will assign a
+        an extremely high score to paths that disagree on labels (a car cannot
+        suddenly transform into a person). If labels match, then scores based
+        off percent overlap in the intersecting boundary. The score is actually
+        the average overlap of the bounding boxes form the two paths during the
+        intersection period.
+
+        Assumes that the paths pass through the boundary at some point.
+        """
+        firstboxes  = first.boxes
+        secondboxes = second.boxes
+        secondboxes = dict((x.frame, x) for x in secondboxes)
+
+        if first.label != second.label:
+            return max(len(firstboxes), len(secondboxes)) + 1
+
+        cost = 1
+        count = 0
+        for firstbox in firstboxes:
+            if inBoundary(firstbox,boundary):
+                #Assume that the second box is defined in all the frames where the first box is defined.
+                secondbox = secondboxes[firstbox.frame]
+                if inBoundary(secondbox,boundary):
+                    count += 1
+                    #don't care if one is considered out of bounds (as long as they are both in boundary)
+                    #if firstbox.lost != secondbox.lost:
+                    #    cost += 1
+                    cost += 1 - firstbox.percentoverlap(secondbox)
+        if count > 0:
+            cost = cost / count
+        return cost
+    return percentoverlap
+
+
+def merge(segment1, segment2, boundary, threshold=0.5):
+    """
+    Combines the tracks from segment1 with the tracks from segment2.
+    The tracks have to enter to boundary region to qualify to be merged.
+    boundary = (x1, y1, x2, y2)
+
+    boundary defines a rectangle. (x1,y1) is the top left corner, 
+    (x2, y2) is the bottom right corner
+
+    Uses 'method' to score two candidate paths. If the score returned by
+    'method' is greater than threshold, 
+    then the correspondance is considered bunk and a new path
+    is created instead.
+
+    threshold corresponds to the "average overlap of the bounding
+    boxes across the frames where the boxs are in the boundary"
+
+    In general, if 'method' returns 0 for a perfect match and 1 for a
+    horrible match, then 'threshold' = 0.5 is pretty good.
+    """
+
+
+    def filtered_paths(segment):
+        """
+        Filter the paths in segment1 and segment2 by whether they enter the boundary rectangle.
+        """
+        paths = []
+        for i in xrange(len(segment)):
+            for box in segment[i].boxes:
+                if inBoundary(box,boundary):
+                    paths.append(segment[i])
+                    break
+        return paths
+
+
+    ###################################
+    ########## other stuff ###########
+    ###################################
+    method = getpercentoverlap(boundary)
+
+
+    ###################################
+    ############ Code #################
+    ###################################
+    #Smaller segment with the qualifying Pathes
+    segment1_filtered = filtered_paths(segment1)
+    segment2_filtered = filtered_paths(segment2)
+
+
+    #We will append the new paths to segment2
+    for first, second, score in match(segment1_filtered, segment2_filtered, method):
+        print("{0} associated to {1} with score {2}".format(first, second, score))
+        if first is None:
+            continue
+
+        #append first onto segment2
+        addFirst = second is None
+    
+        if not addFirst:
+            scorerequirement = threshold
+            if score > scorerequirement:
+                # They don't overlap enough during the boundary, so we can interpret the two paths
+                # as two different paths. (dont merge)
+                print("Score {0} exceeds merge threshold of {1}".format(score, scorerequirement))
+                addFirst = True
+            else:
+                print("Score {0} satisfies merge threshold of {1}".format(score, scorerequirement))
+        
+        if addFirst:
+            #we should append the first onto the seconds
+            first.id = len(segment2)
+            segment2.append(first)
+        else:
+            path = mergepath(first, second, boundary)
+            segment2[path.id] = path
+    #don't need to return anything because segment2 should have already been updated.
+
+def mergepath(left, right, boundary):
+    """
+    Takes two paths, left and right, and combines them into a single path by
+    removing the duplicate annotations in the overlap region.
+    """
+    #The path will replace the right path from the segment2
+    response = Path(right.id, right.label, None)
+
+    leftboxes = left.boxes
+    rightboxes = right.boxes
+    rightboxes = dict((x.frame, x) for x in rightboxes)
+
+    for leftbox in leftboxes:
+        #assume right and left always contain the same frame range.
+        rightbox = rightboxes[leftbox.frame]
+        #The frame is visible in the left path, but not visible from the right
+        if not leftbox.lost and rightbox.lost:
+            rightboxes[leftbox.frame] = leftbox
+        if leftbox.lost and rightbox.lost and inBoundary(leftbox,boundary) and inBoundary(rightbox,boundary):
+            #both of the boxes are lost, but both are in the boundary (then they actually aren't lost)
+            rightboxes[leftbox.frame].lost = 0
+
+    response.boxes = [value for key, value in rightboxes.iteritems()]
+    return response
+
+
+
+
+def delete_short_paths(segment):
+    """
+    Deletes the paths from segment which are shorter than the average length path.
+    """
+    total_len = 0
+    for path in segment:
+        total_len += len(path['boxes'])
+    avg_len = float(total_len) / len(segment)
+    indices = []
+    for i, path in enumerate(segment):
+        if len(path['boxes']) < avg_len:
+            indices.append(i)
+    #delete these indices
+    for i in indices:
+        del segment[i]
 
 
 
 
 
 if __name__ == '__main__':
-    ann_dir = '../../uavdata-bryan/annotations/4k-04-09-4p-1/'
+    ann_dir = '../../uavdata-bryan/annotations/4k-04-09-4p-1-new/'
     file1 = '0-1-0.pkl'
     file2 = '1-0-0.pkl'
     file3 = '1-1-0.pkl'
 
-    merged_output= '../../uavdata-bryan/annotations/4k-04-09-4p-1/merged.pkl'
+    merged_output= '../../uavdata-bryan/annotations/4k-04-09-4p-1-new/merged.pkl'
+    threshold = 0.6
+    no_merge = False
 
-    temporal_margin = 15
-    distance_margin = 50
+    overlap = 50
+    quadrant_sz = (1280, 720)
+
 
     with open(os.path.join(ann_dir,file1),'rb') as f1, open(os.path.join(ann_dir,file2),'rb') as f2, open(os.path.join(ann_dir,file3),'rb') as f3:
-        tracks1 = pickle.load(f1)
-        tracks2 = pickle.load(f2)
-        tracks3 = pickle.load(f3)
+        segment1 = pickle.load(f1)
+        segment2 = pickle.load(f2)
+        segment3 = pickle.load(f3)
 
-    #offset (x,y)
-    offset010 = (1280,0)
-    offset100 = (0,720)
-    offset110 = (1280,720)
-    offset120 = (2560,720)
-    offset210 = (1280,1440)
+    #delete those paths which were not merged properly, so those paths which are very short.
+    delete_short_paths(segment1)
+    delete_short_paths(segment2)
+    delete_short_paths(segment3)
 
-    offset_boxes(tracks1,offset010)
-    offset_boxes(tracks2,offset100)
-    offset_boxes(tracks3,offset110)
+    segment1 = make_paths(segment1)
+    segment2 = make_paths(segment2)
+    segment3 = make_paths(segment3)
 
-    #center_dict = build_start_end_dict(tracks3)
+    #add offset to the tracks.
+    offset_boxes(segment1,offset(0,1,overlap,default_box= quadrant_sz))
+    offset_boxes(segment2,offset(1,0,overlap,default_box= quadrant_sz))
+    offset_boxes(segment3,offset(1,1,overlap,default_box= quadrant_sz))
+    
 
+    if no_merge: #don't do any spatial merging, just concatenate the segments together.
+        merged_output= '../../uavdata-bryan/annotations/4k-04-09-4p-1-new/nomerge.pkl'
+        for path in segment1:
+            path.id = len(segment3)
+            segment3.append(path)
+        for path in segment2:
+            path.id = len(segment3)
+            segment3.append(path)
+    else:
+        #pdb.set_trace()
+        #merges segment1 into segment3. Updates the second segment (discards the first)
+        #top boundary
+        boundary = (quadrant_sz[0]-overlap, quadrant_sz[1]-overlap, 2*quadrant_sz[0]+overlap, quadrant_sz[1]+overlap)
+        merge(segment1, segment3, boundary, threshold=threshold)
+        #left boundary
+        boundary = (quadrant_sz[0]-overlap, quadrant_sz[1]-overlap, quadrant_sz[0]+overlap, 2*quadrant_sz[1]+overlap)
+        merge(segment2,segment3,boundary, threshold=threshold)
+
+
+
+
+
+    segment3 = unmake_paths(segment3)
+    #save the annotations in a pickle file
+    with open(merged_output, 'wb') as f:
+        pickle.dump(segment3, f, protocol=2)
+
+
+    #pdb.set_trace()
+
+
+"""
     #Merge 010 with 110.
     for currIdx, track in enumerate(tracks1):
         label1 = track['label']
@@ -166,14 +426,4 @@ if __name__ == '__main__':
             #assign the new track to the center
             tracks3[min_idx] = merged_track
             del tracks1[currIdx]
-
-
-    tracks3 += tracks1
-    #save the annotations in a pickle file
-    with open(merged_output, 'wb') as f:
-        pickle.dump(tracks3, f, protocol=2)
-
-
-    #pdb.set_trace()
-
-
+"""
