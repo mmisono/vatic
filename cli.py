@@ -711,6 +711,8 @@ class dump(DumpCommand):
         parser.add_argument("--positions", "-pos",
             action="store_true", default=False)
         parser.add_argument("--pascal", action="store_true", default=False)
+        parser.add_argument("--pascal2", action="store_true", default=False)
+        parser.add_argument("--pascal-ratio", type=float, default=0.8)
         parser.add_argument("--pascal-difficult", type = int, default = 100)
         parser.add_argument("--pascal-skip", type = int, default = 15)
         parser.add_argument("--pascal-negatives")
@@ -724,7 +726,7 @@ class dump(DumpCommand):
     def __call__(self, args):
         video, data = self.getdata(args)
 
-        if args.pascal:
+        if args.pascal or args.pascal2:
             if not args.output:
                 print "error: PASCAL output needs an output"
                 return
@@ -771,6 +773,8 @@ class dump(DumpCommand):
                 print "Warning: you should manually update the JPEGImages"
             dumptools.dumppascal(file, video, data, args.pascal_difficult,
                             args.pascal_skip, args.pascal_negatives)
+        elif args.pascal2:
+            dumptools.dumppascal2(file, video, data, args.pascal_ratio)
         elif args.forecast:
             dumptools.dumpforecastdata(file, data)
         elif args.positions:
@@ -778,7 +782,7 @@ class dump(DumpCommand):
         else:
             dumptools.dumptext(file, data, args.groundplane, dumpformat)
 
-        if args.pascal:
+        if args.pascal or args.pascal2:
             return
         elif args.output:
             file.close()

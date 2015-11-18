@@ -1,5 +1,6 @@
 import shutil
 import os
+import random
 import vision.pascal
 import itertools
 import velocity
@@ -530,6 +531,141 @@ def dumppascal(folder, video, data, difficultthresh, skip, negdir):
         except OSError:
             pass
         os.link(path, dest)
+
+    print "Done."
+
+def dumppascal2(folder, video, data, ratio=0.8):
+    byframe = {}
+    for track in data:
+        for box in track.boxes:
+            if box.frame not in byframe:
+                byframe[box.frame] = []
+            byframe[box.frame].append((box, track))
+
+    hasit = {}
+    allframes = [i for i in range(video.totalframes)]
+
+    try:
+        os.makedirs("{0}/Annotations".format(folder))
+    except:
+        pass
+    try:
+        os.makedirs("{0}/ImageSets/".format(folder))
+    except:
+        pass
+    try:
+        os.makedirs("{0}/Images/".format(folder))
+    except:
+        pass
+    numtotal = 0
+
+    print "Writing annotations..."
+    for frame in allframes:
+        if frame in byframe:
+            boxes = byframe[frame]
+        else:
+            boxes = []
+
+        strframe = str(frame+1).zfill(6)
+        filename = "{0}/Annotations/{1}.xml".format(folder, strframe)
+        file = open(filename, "w")
+        file.write("<annotation>\n")
+        file.write("  <folder>{0}</folder>\n".format(folder))
+        file.write("  <filename>{0}.jpg</filename>\n".format(strframe))
+
+        isempty = True
+        for box, track in boxes:
+            if box.lost:
+                continue
+
+            isempty = False
+
+            if track.label not in hasit:
+                hasit[track.label] = set()
+            hasit[track.label].add(frame)
+
+            numtotal += 1
+
+            file.write("  <object>\n")
+            file.write("    <name>{0}</name>\n".format(track.label))
+            file.write("    <bndbox>\n")
+            file.write("      <xmax>{0}</xmax>\n".format(box.xbr))
+            file.write("      <xmin>{0}</xmin>\n".format(box.xtl))
+            file.write("      <ymax>{0}</ymax>\n".format(box.ybr))
+            file.write("      <ymin>{0}</ymin>\n".format(box.ytl))
+            file.write("    </bndbox>\n")
+            file.write("    <occluded>{0}</occluded>\n".format(box.occluded))
+            file.write("  </object>\n")
+
+        if isempty:
+            print("!!! frame {} has no object".format(frame))
+            # since there are no objects for this frame,
+            # we need to fabricate one
+            file.write("  <object>\n")
+            file.write("  <name>not-a-real-object</name>\n")
+            file.write("  <bndbox>\n")
+            file.write("    <xmax>10</xmax>\n")
+            file.write("    <xmin>20</xmin>\n")
+            file.write("    <ymax>30</ymax>\n")
+            file.write("    <ymin>40</ymin>\n")
+            file.write("  </bndbox>\n")
+            file.write("  </object>\n")
+
+        file.write("  <size>\n")
+        file.write("    <depth>3</depth>\n")
+        file.write("    <height>{0}</height>\n".format(video.width))
+        file.write("    <width>{0}</width>\n".format(video.height))
+        file.write("  </size>\n")
+        file.write("  <source>\n")
+        file.write("    <annotation>{0}</annotation>\n".format(video.slug))
+        file.write("    <database>vatic</database>\n")
+        file.write("    <image>vatic</image>\n")
+        file.write("  </source>\n")
+        file.write("  <owner>\n")
+        file.write("    <flickrid>vatic</flickrid>\n")
+        file.write("    <name>vatic</name>\n")
+        file.write("  </owner>\n")
+        file.write("</annotation>\n")
+        file.close()
+
+    print "Writing image sets..."
+    assert ratio <= 1.0
+    files = [str(x+1).zfill(6) for x in allframes]
+    random.shuffle(files)
+    trainset = []
+    testset = []
+    i = 0
+    while i < len(files)*ratio:
+        trainset.append(files[i])
+        i += 1
+    while i < len(files):
+        testset.append(files[i])
+        i += 1
+    trainset.sort()
+    testset.sort()
+
+    assert len(trainset) + len(testset) == len(files)
+
+    with open("{0}/ImageSets/train.txt".format(folder),"w") as f:
+        for n in trainset:
+            f.write(n+"\n")
+
+    with open("{0}/ImageSets/test.txt".format(folder),"w") as f:
+        for n in testset:
+            f.write(n+"\n")
+
+    print "Writing JPEG frames..."
+    for frame in allframes:
+        strframe = str(frame+1).zfill(6)
+        path = video.getframepath(frame, video.location)
+        dest = "{0}/Images/{1}.jpg".format(folder, strframe)
+        try:
+            os.unlink(dest)
+        except OSError:
+            pass
+
+        #os.link(path, dest)
+        os.symlink(path, dest)
 
     print "Done."
 
