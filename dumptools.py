@@ -557,15 +557,28 @@ def dumppascal2(folder, video, data, ratio=0.8):
         os.makedirs("{0}/Images/".format(folder))
     except:
         pass
-    numtotal = 0
 
     print "Writing annotations..."
+    valid_frames = []
     for frame in allframes:
         if frame in byframe:
             boxes = byframe[frame]
         else:
             boxes = []
 
+        # empty check
+        isempty = True
+        for box, track in boxes:
+            if box.lost:
+                continue
+            else:
+                isempty = False
+                break
+        if isempty:
+            print("!!! frame {} has no object. skip".format(frame))
+            continue
+
+        valid_frames.append(frame)
         strframe = str(frame+1).zfill(6)
         filename = "{0}/Annotations/{1}.xml".format(folder, strframe)
         file = open(filename, "w")
@@ -573,18 +586,13 @@ def dumppascal2(folder, video, data, ratio=0.8):
         file.write("  <folder>{0}</folder>\n".format(folder))
         file.write("  <filename>{0}.jpg</filename>\n".format(strframe))
 
-        isempty = True
         for box, track in boxes:
             if box.lost:
                 continue
 
-            isempty = False
-
             if track.label not in hasit:
                 hasit[track.label] = set()
             hasit[track.label].add(frame)
-
-            numtotal += 1
 
             file.write("  <object>\n")
             file.write("    <name>{0}</name>\n".format(track.label))
@@ -595,20 +603,6 @@ def dumppascal2(folder, video, data, ratio=0.8):
             file.write("      <ymin>{0}</ymin>\n".format(box.ytl))
             file.write("    </bndbox>\n")
             file.write("    <occluded>{0}</occluded>\n".format(box.occluded))
-            file.write("  </object>\n")
-
-        if isempty:
-            print("!!! frame {} has no object".format(frame))
-            # since there are no objects for this frame,
-            # we need to fabricate one
-            file.write("  <object>\n")
-            file.write("  <name>not-a-real-object</name>\n")
-            file.write("  <bndbox>\n")
-            file.write("    <xmax>10</xmax>\n")
-            file.write("    <xmin>20</xmin>\n")
-            file.write("    <ymax>30</ymax>\n")
-            file.write("    <ymin>40</ymin>\n")
-            file.write("  </bndbox>\n")
             file.write("  </object>\n")
 
         file.write("  <size>\n")
@@ -630,7 +624,7 @@ def dumppascal2(folder, video, data, ratio=0.8):
 
     print "Writing image sets..."
     assert ratio <= 1.0
-    files = [str(x+1).zfill(6) for x in allframes]
+    files = [str(x+1).zfill(6) for x in valid_frames]
     random.shuffle(files)
     trainset = []
     testset = []
